@@ -1,5 +1,7 @@
 # Changelog
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions track chat-sprint work rather than semver until v1.0.
 
@@ -22,7 +24,7 @@ Versions track chat-sprint work rather than semver until v1.0.
 
 ### Changed (2026-04-20)
 - iOS background VPN and iOS-as-gateway formally dropped (previously "parked"). See ROADMAP scope decisions.
-- **Architectural pivot**: gateway redesigned from SOCKS5 proxy to **blind TCP passthrough**. Phone's VLESS+Reality handshake is end-to-end with Hetzner. Gateway sees only encrypted bytes. Fixes the largest rogue-gateway surveillance surface. H1 work superseded by H4; election + hot-swap plumbing reused.
+- **Architectural pivot**: gateway redesigned from SOCKS5 proxy to **blind TCP passthrough**. Phone's VLESS+Reality handshake is end-to-end with the exit node. Gateway sees only encrypted bytes. Fixes the largest rogue-gateway surveillance surface. H1 work superseded by H4; election + hot-swap plumbing reused.
 
 ### Fixed (2026-04-20 debugging session)
 - Mac mesh broadcast was sending to wrong address on `/22` networks (computed `.X.255` assuming /24). Now uses kernel-reported broadcast.
@@ -36,7 +38,7 @@ Versions track chat-sprint work rather than semver until v1.0.
 - **H4 — Blind TCP passthrough gateway** (~2 days, highest priority)
 - **H5 — Zero-touch gateway auto-discovery + Reality validation** (~4 days)
 - Dynamic server config fetch (C1)
-- Bootstrap server deployed to Hetzner :3210 (H3)
+- Bootstrap server deployed (H3)
 - ChaCha20-Poly1305 on mesh UDP (C4)
 - Per-user VLESS UUIDs via Telegram bot (C3)
 
@@ -48,9 +50,9 @@ Versions track chat-sprint work rather than semver until v1.0.
 - **Mac app** (`~/OpenBandMac/`) as gateway node running sing-box, mesh discovery, Internet Sharing.
 - `GatewayManager.swift` orchestrator for Mac app.
 - `MeshDiscovery.swift` on Mac, shares the same JSON/UDP :5555 wire format as mobile.
-- `SingBoxManager.swift` spawns sing-box subprocess and exposes SOCKS5 on :10808.
+- `SingBoxManager.swift` spawns sing-box subprocess and exposes a local SOCKS5 endpoint.
 - `BootstrapClient.swift` (Mac) + `bootstrap/server.js` (Node.js/Express) for rendezvous.
-- `CredentialGenerator.swift` for daily rotating SSID/password via SHA256(salt:date).
+- `CredentialGenerator.swift` for daily rotating SSID/password (keyed hash; salt + derivation not published).
 - HomeScreen, NodesScreen, AccountScreen in Mac app.
 
 ### Changed
@@ -111,7 +113,7 @@ Pending. Marketing + download page.
 
 ### Added
 - `Mobile.xcframework` built via `gomobile bind -target ios/arm64` from sing-box fork.
-- iOS VPN foreground mode (sing-box running in main app process, SOCKS5 :10808 / HTTP :10809).
+- iOS VPN foreground mode (sing-box running in main app process, local SOCKS5 / HTTP proxy inbounds).
 - HTTP proxy inbound on iOS for local testing.
 
 ---
@@ -137,11 +139,11 @@ Pending. Marketing + download page.
 ## [Chat 01] — Done — Full project setup + Android mesh
 
 ### Added
-- React Native 0.73.4 scaffold, bundle `com.openband.app`.
+- React Native 0.73.4 scaffold.
 - Zustand store (`useVPNStore.ts`).
 - HomeScreen, NodesScreen, AccountScreen (initial).
 - Android `XrayVpnService`, `MeshController`, `UdpDiscoveryService`.
-- Android VPN tunnel confirmed to Hetzner via VLESS+Reality.
+- Android VPN tunnel confirmed to exit node via VLESS+Reality.
 
 ### Commits
 - `6c3710e` OpenBand v1.0 — Phase 2 complete, Tesla UI

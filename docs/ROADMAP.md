@@ -1,5 +1,7 @@
 # Roadmap
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 Status as of **2026-04-20** (end of Chat 09).
 Priority is strict: do the Critical items before anything in High, etc.
 
@@ -7,12 +9,12 @@ Priority is strict: do the Critical items before anything in High, etc.
 
 ## What works today (confirmed)
 
-- ✅ Android VPN tunnel to Hetzner via VLESS+Reality
+- ✅ Android VPN tunnel to exit node via VLESS+Reality
 - ✅ iOS VPN foreground mode (sing-box in main app process)
 - ✅ Mesh discovery on all 3 platforms (Android, iOS, Mac)
 - ✅ Gateway election — Mac wins with score 1.0 in steady state
 - ✅ `gatewayChanged` / `becomeGateway` / `gatewayLost` JS events
-- ✅ Mac sing-box tunnel confirmed (`curl --socks5 127.0.0.1:10808 https://api.ipify.org` → `<exit-server-ip>`)
+- ✅ Mac sing-box tunnel confirmed (exit VPS IP verified via egress IP check)
 - ✅ Multicast exclusion from Android VPN TUN (no mesh traffic leaks through tunnel)
 - ✅ Rate limiting on mesh packets (no ACK storms)
 - ✅ Mac Nodes screen shows Android + iOS live
@@ -46,13 +48,13 @@ macOS Internet Sharing cannot share WiFi→WiFi. Needs Ethernet upstream.
 
 **Android:** `DiscoveryForegroundService.kt:208-216` already calls `XrayVpnService.restartXrayWithConfig(XrayConfigBuilder.relayConfig(ip, port))` on gateway change, and restores `gatewayConfig()` on becoming gateway. `restartXrayWithConfig` hot-swaps Xray without touching tun2socks or the TUN fd.
 
-**iOS native:** `PacketTunnelProvider.handleAppMessage` accepts `{gateway: ip}`, rebuilds sing-box with SOCKS5 outbound → gateway:10808 via `restartCore(gatewayIP:)`. `VpnModule.setGateway(ip)` persists to app group + notifies NE extension.
+**iOS native:** `PacketTunnelProvider.handleAppMessage` accepts `{gateway: ip}`, rebuilds sing-box with SOCKS5 outbound to the gateway via `restartCore(gatewayIP:)`. `VpnModule.setGateway(ip)` persists to app group + notifies NE extension.
 
 **iOS JS glue (added 2026-04-20):** `src/services/VpnService.ts` now subscribes to DiscoveryModule's `gatewayChanged` / `becomeGateway` / `gatewayLost` on iOS and calls `VpnModule.setGateway()` with the mesh gateway IP. `VpnModule.m` ObjC bridge exposes `setGateway:` as a Promise-returning method.
 
 **Needs on-device verification:**
 1. Android+iPhone+Mac on same WiFi, Mac connected.
-2. On each phone: visit `whatismyip.com` — should show Mac's public IP (or Hetzner's, depending on how Mac is configured).
+2. On each phone: visit `whatismyip.com` — should show Mac's public IP (or the exit node's, depending on how Mac is configured).
 3. Watch logs: Android `logcat | grep "Remote gateway"`, iOS console `filter restartCore`, Mac console for SOCKS5 inbound connections.
 4. Toggle Mac offline → phones should re-elect or fall back to direct VLESS without traffic disruption beyond the election window (~1s).
 
@@ -61,7 +63,7 @@ macOS Internet Sharing cannot share WiFi→WiFi. Needs Ethernet upstream.
 ## Critical (blocks beta-to-Iran)
 
 ### C1 + C2. Multi-server exit infrastructure — see [EXIT_INFRASTRUCTURE.md](EXIT_INFRASTRUCTURE.md)
-Full strategy document written 2026-04-21. Moves from single-Hetzner-VPS to a **dynamic pool of 5-7 servers across 5+ providers in neutral jurisdictions**, discovered via CDN-fronted bootstrap with DoH fallback, rotated on a quarterly + block-triggered schedule.
+Full strategy document written 2026-04-21. Moves from a single exit VPS to a **dynamic pool of 5-7 servers across 5+ providers in neutral jurisdictions**, discovered via CDN-fronted bootstrap with DoH fallback, rotated on a quarterly + block-triggered schedule.
 
 **Why this is the highest-ROI security investment pre-beta:** closes the single point of failure that a single IP-block attack by Iran could exploit to kill the entire network instantly.
 
@@ -115,10 +117,10 @@ Clients never learn volunteer gateway IPs directly. CDN-fronted broker authentic
 H1 wired the mechanism (mesh → hot-swap Xray config → route through gateway). During debugging we discovered the SOCKS5 design leaks destinations to rogue gateways. Pivoted to blind TCP passthrough (H4 below). H1's plumbing (mesh election, config hot-swap, `onGatewayChanged` → `restartXrayWithConfig`) is reused unchanged — only the outbound protocol changes from SOCKS5 to VLESS-to-gateway.
 
 ### ~~H4. Blind gateway — TCP passthrough~~ — Attempted 2026-04-20, pivoted
-**Result:** implemented end-to-end (Mac `TcpPassthroughForwarder.swift`, Android VLESS outbound to `gateway:4443`, iOS same). Gateway-side bytes flowed correctly (verified via byte counters). **But every session failed with a signature `↑~3.7KB ↓8961B` pattern** — Hetzner's Reality server consistently rejected the phone's ClientHello and served its `www.microsoft.com` masquerade blob (8961B, pixel-consistent across all sessions).
+**Result:** implemented end-to-end (Mac `TcpPassthroughForwarder.swift`, Android VLESS outbound to a gateway port, iOS same). Gateway-side bytes flowed correctly (verified via byte counters). **But every session failed with a distinctive upstream-bytes / downstream-bytes signature** — the exit node's Reality server consistently rejected the phone's ClientHello and served its SNI masquerade blob (pixel-consistent across all sessions).
 
 **Root cause undetermined.** Hypotheses:
-- Xray client's Reality ClientHello (phone) doesn't match what Hetzner's Reality server (likely sing-box or Xray on X-UI) expects — Reality protocol version skew or uTLS fingerprint mismatch.
+- Xray client's Reality ClientHello (phone) doesn't match what the exit's Reality server expects — Reality protocol version skew or uTLS fingerprint mismatch.
 - TCP-level characteristics seen by Reality (from Mac's OS) don't match the TLS fingerprint (Chrome-emulated by Xray on Android). Reality may detect this inconsistency and flag as probe.
 - Some server-side Reality config detail not visible from the client.
 
@@ -127,14 +129,14 @@ H1 wired the mechanism (mesh → hot-swap Xray config → route through gateway)
 **Next step:** H4b below — a pragmatic middle ground that works and still encrypts the phone↔gateway hop.
 
 ### H4b. VLESS re-termination gateway (replaces H4)
-Gateway runs a VLESS *inbound* on `:4443` (new keys, not Hetzner's) and a VLESS+Reality *outbound* to Hetzner. Phone speaks VLESS to Mac; Mac terminates, re-originates a proven-working VLESS+Reality to Hetzner.
+Gateway runs a VLESS *inbound* with its own keys and a VLESS+Reality *outbound* to the exit node. Phone speaks VLESS to Mac; Mac terminates, re-originates a proven-working VLESS+Reality to the exit.
 
 **Tradeoff:** Mac still sees destinations (SOCKS-like semantics from terminated VLESS), but the phone↔Mac hop is encrypted (not raw SOCKS5 over LAN). Fits residual risk A from SECURITY.md — gateway-visibility remains, but at least the LAN traffic is private.
 
 **Implementation:**
-- Mac `SingBoxManager`: add a second VLESS inbound on `:4443` with its own UUID + Reality keys (generated on first run, rotated daily).
-- Mac's existing outbound to Hetzner remains unchanged.
-- Android + iOS `relayConfig`: point VLESS outbound at `gateway_ip:4443` with Mac's keys (delivered via mesh or paired QR).
+- Mac `SingBoxManager`: add a second VLESS inbound with its own UUID + Reality keys (generated on first run, rotated daily).
+- Mac's existing outbound to the exit remains unchanged.
+- Android + iOS `relayConfig`: point VLESS outbound at the gateway with Mac's keys (delivered via mesh or paired QR).
 - Key delivery: put UUID + Reality pubkey in `gateway_announce` message (mesh already encrypted in the v2 plan).
 
 **Work:** ~3 days.
@@ -160,21 +162,18 @@ Phone opens OpenBand → taps Connect → system auto-joins the OpenBand SSID us
 **Remaining work:**
 - iOS `NEHotspotConfigurationManager` (~½ day)
 - JS/UX — status screen "Finding gateway..." → "Connected via OB-xxxx" (~½ day)
-- Phone-side `GatewayValidator`: after join, try Reality handshake to Hetzner via gateway. If success → stay. If fail → blacklist SSID for 15 min, try next. (~1 day)
+- Phone-side `GatewayValidator`: after join, try Reality handshake to the exit via gateway. If success → stay. If fail → blacklist SSID for 15 min, try next. (~1 day)
 
 **Total remaining work:** ~2 days.
 **Depends on:** H4 must land first — H4 reverted to SOCKS5 relay which is already shipped.
 
 ### H2. Internet reachability in election score
-Periodic probe: `curl --connect-timeout 2 https://<exit-server>:443`.
+Periodic probe against the exit endpoint with a short connect timeout.
 Multiply existing score by reachability {0, 1}.
 **Work:** ~1 day.
 
-### H3. Deploy bootstrap server to Hetzner :3210
-Code is written (`bootstrap/server.js`). Needs:
-- Open port 3210 in Hetzner firewall
-- Run `chmod +x bootstrap/deploy.sh && ./bootstrap/deploy.sh`
-- Health: `curl http://<exit-server-ip>:3210/health`
+### H3. Deploy bootstrap server
+Code is written (`bootstrap/server.js`). Deployment steps (firewall rules, service install, health check) are operational detail, not published.
 **Work:** ~½ day.
 
 ---

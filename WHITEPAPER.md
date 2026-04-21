@@ -2,6 +2,7 @@
 
 **Version 0.1 · Pre-beta Whitepaper**
 **Date: April 2026**
+**Website:** [https://www.openband.io](https://www.openband.io)
 
 ---
 
@@ -27,7 +28,7 @@ OpenBand takes a different approach. Instead of hiding a small number of high-va
 
 OpenBand is implemented as:
 
-- A **React Native mobile app** (Android 10+, iOS 11+) with bundle ID `com.openband.app`
+- A **React Native mobile app** (Android 10+, iOS 11+)
 - A **SwiftUI macOS app** that acts as a gateway node
 - A planned **OpenWRT router package** for dedicated always-on gateways
 - **Exit servers** running VLESS+Reality on standard ports

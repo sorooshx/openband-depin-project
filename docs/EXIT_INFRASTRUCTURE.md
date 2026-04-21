@@ -1,5 +1,7 @@
 # Exit Server Infrastructure Strategy
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 **Status:** architectural direction, not yet implemented.
 **Priority:** Critical — blocks beta to Iran. Expands [ROADMAP C1](ROADMAP.md) + [C2](ROADMAP.md) into a full strategy.
 
@@ -56,7 +58,7 @@ App contacts a well-known endpoint on first launch (and periodically after). The
 Client → HTTPS (domain-fronted) → bootstrap.example.com → returns:
 {
   "servers": [
-    {"id": "nl-1", "host": "a.b.c.d", "port": 443, "sni": "www.microsoft.com",
+    {"id": "nl-1", "host": "a.b.c.d", "port": 443, "sni": "<masquerade-target>",
      "public_key": "...", "short_id": "...", "country": "NL", "load": 0.3},
     {"id": "de-1", ...},
     ...
@@ -268,7 +270,7 @@ OpenBand's target positioning is **Psiphon-class censorship resistance with Snow
 
 ## 11. Recommendation summary
 
-Move from single Hetzner VPS to a **dynamic pool of 5-7 servers across 5+ providers in neutral jurisdictions, discovered via domain-fronted bootstrap service with DoH fallback, rotated on a quarterly + block-triggered schedule**. Budget ~$40-80/month initial operating cost, break-even at ~40 paying subscribers.
+Move from a single exit VPS to a **dynamic pool of 5-7 servers across 5+ providers in neutral jurisdictions, discovered via domain-fronted bootstrap service with DoH fallback, rotated on a quarterly + block-triggered schedule**. Budget ~$40-80/month initial operating cost, break-even at ~40 paying subscribers.
 
 This is **the single most valuable security investment OpenBand can make pre-beta**. It closes the largest current vulnerability (single point of failure) and unlocks the path to onion routing and zero-touch onboarding at scale.
 

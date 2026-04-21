@@ -8,6 +8,8 @@
 [![Whitepaper](https://img.shields.io/badge/whitepaper-read-blue)](WHITEPAPER.md)
 [![License: TBD](https://img.shields.io/badge/license-TBD-lightgrey)](LICENSE)
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 OpenBand is a censorship-circumvention system for users in jurisdictions with state-level traffic filtering. It solves the problem that **centralized VPNs have a single point of failure** — one IP block kills the service — by doing three things at once:
 
 1. **DePIN** — gateways are run by a distributed network of volunteer operators (laptops, OpenWRT routers, satellite-connected devices), incentivized rather than centrally owned. No single operator, company, or jurisdiction controls the network.

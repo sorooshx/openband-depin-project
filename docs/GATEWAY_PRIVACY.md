@@ -1,5 +1,7 @@
 # Gateway IP Privacy
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 **Status:** architectural target, not implemented.
 **Priority:** Critical (C6 in [ROADMAP.md](ROADMAP.md)) — blocks beta to Iran.
 
@@ -7,7 +9,7 @@
 
 ## Why this document exists
 
-[SECURITY.md](SECURITY.md) covers the single-exit-server case (protecting our own Hetzner IP). That problem is solvable by rotation + domain-fronted bootstrap. This document covers the **harder** problem: protecting the IPs of **volunteer gateway nodes** — the people running OpenBand on their Mac, router, or Starlink-connected device outside Iran who relay traffic for users inside Iran.
+[SECURITY.md](SECURITY.md) covers the single-exit-server case (protecting the project's own exit IPs). That problem is solvable by rotation + domain-fronted bootstrap. This document covers the **harder** problem: protecting the IPs of **volunteer gateway nodes** — the people running OpenBand on their Mac, router, or Starlink-connected device outside Iran who relay traffic for users inside Iran.
 
 Once volunteer gateways exist, the failure mode is different:
 
@@ -106,7 +108,7 @@ A volunteer gateway that suddenly sees 1000 connections/minute from new clients 
          │<══════════════════════════════════════════════════>│
          │                                                    │
          │  6. gateway forwards to its own exit               │
-         │         (Hetzner / own Starlink / VLESS / whatever)│
+         │         (project exit / own Starlink / VLESS / …)  │
          │                                                    │
 ```
 
@@ -131,7 +133,7 @@ A volunteer gateway that suddenly sees 1000 connections/minute from new clients 
 ### Volunteer gateway (Mac app, OpenWRT router, Linux daemon)
 - Heartbeats to broker every 30s (stays in pool)
 - Accepts WebRTC offers initiated by broker
-- Forwards DataChannel traffic to its chosen exit (VLESS+Reality to Hetzner, or direct if operator has untraceable upstream)
+- Forwards DataChannel traffic to its chosen exit (VLESS+Reality to a project exit node, or direct if operator has untraceable upstream)
 - Reports bandwidth / session count back to operator
 
 ### Transport choice
@@ -139,7 +141,7 @@ A volunteer gateway that suddenly sees 1000 connections/minute from new clients 
   - Proven at scale (browser-native, used by Snowflake, Jitsi, WhatsApp).
   - NAT traversal via STUN/TURN for symmetric NATs.
 - **STUN:** use Google's public STUN (`stun.l.google.com:19302`) as a default, plus self-hosted as backup.
-- **TURN fallback:** self-hosted on Hetzner for clients behind symmetric NAT. Adds a proxy hop but keeps gateway IP still hidden from client.
+- **TURN fallback:** self-hosted on a project server for clients behind symmetric NAT. Adds a proxy hop but keeps gateway IP still hidden from client.
 
 ### Key authentication
 - Broker signs SDP offers with an Ed25519 key baked into the client.
@@ -205,9 +207,9 @@ Beyond what's already planned in [ROADMAP C1–C5](ROADMAP.md):
 
 Realistic target: **v2.0 of OpenBand is when L1–L4 are shipped.** L5 and L6 are v3.0 work.
 
-## What stays in the Hetzner server's role under this model
+## What stays in the project exit server's role under this model
 
-Under Snowflake-style rendezvous, the Hetzner server's role shrinks but doesn't disappear:
+Under Snowflake-style rendezvous, the project exit server's role shrinks but doesn't disappear:
 
 - **Exit of last resort** when no volunteer gateways are available (bootstrap phase).
 - **TURN server** for NAT-symmetric clients.

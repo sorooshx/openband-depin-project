@@ -1,5 +1,7 @@
 # Mesh Protocol
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 Wire-level spec for node discovery, gateway election, and keepalive.
 Current version: **v1** (unencrypted JSON over UDP). v2 will wrap this in ChaCha20-Poly1305.
 

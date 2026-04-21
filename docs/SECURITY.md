@@ -1,5 +1,7 @@
 # Security
 
+**Website:** [https://www.openband.io](https://www.openband.io)
+
 ## Threat model
 
 **Adversary:** Iranian state-level actor with
@@ -50,8 +52,8 @@ These are all pre-beta blockers. None are mitigated today.
 **Fix:** v2 of [MESH_PROTOCOL.md](MESH_PROTOCOL.md) wraps datagrams in ChaCha20-Poly1305 with a PSK derived from the daily SSID/password.
 
 ### 6. No internet quality in election
-**Risk:** A node with "internet" that actually can't reach Hetzner (captive portal, local-only WiFi, DNS blocked) wins election and black-holes all traffic.
-**Fix:** Add a "reachability score" to election: periodic `curl --connect-timeout 2 https://<exit-server-ip>:443`. Multiply existing score by reachability {0, 1}.
+**Risk:** A node with "internet" that actually can't reach the exit (captive portal, local-only WiFi, DNS blocked) wins election and black-holes all traffic.
+**Fix:** Add a "reachability score" to election: periodic `curl --connect-timeout 2` against the exit endpoint. Multiply existing score by reachability {0, 1}.
 
 ## Gateway-as-adversary threat model
 
@@ -59,14 +61,14 @@ This section covers the "what if the gateway operator is hostile" threat. It's a
 
 ### The old design was vulnerable
 
-Prior to 2026-04-20, the gateway was a **SOCKS5 proxy**. To forward traffic, the gateway had to parse each `CONNECT twitter.com:443` request — meaning a rogue operator could log every destination each phone visited. The Reality tunnel only protected the gateway→Hetzner hop, not phone→gateway.
+Prior to 2026-04-20, the gateway was a **SOCKS5 proxy**. To forward traffic, the gateway had to parse each `CONNECT twitter.com:443` request — meaning a rogue operator could log every destination each phone visited. The Reality tunnel only protected the gateway→exit hop, not phone→gateway.
 
 ### The fix: blind TCP passthrough ([ROADMAP H4](ROADMAP.md))
 
 The gateway is now (being made) a **byte-pipe**:
 
-- Gateway listens on `:443`, forwards all bytes to `<exit-server-ip>:443`.
-- Phone's Xray does the VLESS+Reality handshake **end-to-end with Hetzner**.
+- Gateway listens on the standard HTTPS port, forwards all bytes to the exit node.
+- Phone's Xray does the VLESS+Reality handshake **end-to-end with the exit node**.
 - Gateway sees only encrypted Reality-wrapped bytes. No destinations, no content, no TLS metadata.
 
 See [ARCHITECTURE.md § Trust model](ARCHITECTURE.md#trust-model) for the full diagram.
@@ -91,8 +93,8 @@ A gov-run gateway could silently drop specific flows — e.g., refuse to forward
 
 **Mitigations:**
 - **Health probes** — phone periodically attempts a connection to a known-good IP through the gateway. If success rate drops below 95%, blacklist gateway, try next.
-- **Cross-check with Hetzner** — Hetzner logs successful Reality handshakes. If a user's phone claims "can't connect" but Hetzner never saw a handshake attempt from their gateway, flag the gateway.
-- **Multi-path** — phone keeps a direct VLESS connection to Hetzner as backup. If gateway-relayed traffic fails, fall back.
+- **Cross-check at the exit** — exit nodes log successful Reality handshakes. If a user's phone claims "can't connect" but the exit never saw a handshake attempt from their gateway, flag the gateway.
+- **Multi-path** — phone keeps a direct VLESS connection to the exit as backup. If gateway-relayed traffic fails, fall back.
 
 #### Risk C — WiFi-level fingerprinting (MAC, probe requests)
 Gateway's WiFi access point sees every associated device's MAC address and the list of SSIDs the device probes for. This persists even without any OpenBand traffic.
@@ -133,10 +135,10 @@ Gateway can silently log all metadata and upload it to the adversary later (once
 ## Mitigated issues
 
 ### VLESS+Reality is the exit
-TLS-in-TLS with a real SNI (`www.microsoft.com`) — traffic looks like someone hitting microsoft.com. Iran DPI can't distinguish handshake from a real TLS session. Known good as of 2026-04.
+TLS-in-TLS with a real SNI — traffic is indistinguishable from a legitimate TLS session to a major HTTPS service. Iran DPI can't distinguish the handshake from a real TLS session. Masquerade target rotates and is not documented publicly. Known good as of 2026-04.
 
 ### Multicast leakage via TUN
-Early Android builds allowed mesh UDP multicast to go through the VPN tunnel, leaking node IDs to Hetzner. Fixed in `XrayVpnService.kt` by excluding `224.0.0.0/4` and `255.255.255.255` from the VPN routing table.
+Early Android builds allowed mesh UDP multicast to go through the VPN tunnel, leaking node IDs upstream. Fixed in `XrayVpnService.kt` by excluding `224.0.0.0/4` and `255.255.255.255` from the VPN routing table.
 
 ### ACK storms
 Early testing saw phones ACK-flooding the gateway, killing the mesh. Fixed by rate-limiting per message type (see [MESH_PROTOCOL.md](MESH_PROTOCOL.md)).
@@ -149,7 +151,7 @@ Layered defense, weakest → strongest:
 Layer 0: WiFi WPA2/WPA3 on the hotspot (phone↔router)
 Layer 1: ChaCha20-Poly1305 on mesh UDP (node↔node, PSK = daily secret)
 Layer 2: WireGuard tunnel on the mesh hop (phone↔Mac gateway, post-Phase-4)
-Layer 3: VLESS + Reality TLS on exit (Mac/phone↔Hetzner, port 443, SNI masquerade)
+Layer 3: VLESS + Reality TLS on exit (Mac/phone↔exit VPS, standard HTTPS port, SNI masquerade)
 Layer 4: HTTPS the user's own traffic (app↔destination)
 ```
 
@@ -167,13 +169,13 @@ Each layer is meaningful even if an outer one is compromised.
 ## Incident response playbook
 
 ### Server IP appears blocked in Iran
-1. Monitor: user reports + Hetzner RTT from inside Iran (via friend/VPN).
-2. Rotate: spin up a new Hetzner VPS, update bootstrap server's server list.
+1. Monitor: user reports + exit-node RTT from inside Iran (via friend/VPN).
+2. Rotate: spin up a new exit VPS, update bootstrap server's server list.
 3. Clients auto-refresh server list on next bootstrap poll (every 10min).
 4. Old IP stays alive for 24h as fallback.
 
 ### VLESS UUID leaked
-1. Revoke in X-UI panel.
+1. Revoke at the exit node's admin panel.
 2. If widespread: rotate UUID of the leaked subscription tier, force those users to re-register.
 
 ### Binary reverse-engineered
