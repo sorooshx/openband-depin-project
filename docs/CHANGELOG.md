@@ -67,8 +67,8 @@ Versions track chat-sprint work rather than semver until v1.0.
 
 ---
 
-## [Chat 08] — Pending — Telegram bot + TON/USDT subscription
-Pending. Ties into C3 (per-user VLESS UUID).
+## [Chat 08] — Pending — Telegram bot + USDC-on-Base subscription
+Pending. Ties into C3 (per-user VLESS UUID). Economic model decision 2026-04-21: subscriptions paid in USDC on Base (not TON). Free during confirmed internet blackouts. Gateway-operator rewards + Starlink reimbursements funded from donations today, subscriptions post-launch.
 
 ---
 

@@ -34,7 +34,7 @@ Commercial VPN providers (NordVPN, ExpressVPN, Mullvad, Proton) operate **pools 
 
 1. **Central login service.** Creates a single high-value target — both for blocking and for legal coercion. OpenBand uses decentralized subscription tokens (signed by broker).
 2. **Standard VPN protocols** (OpenVPN, IKEv2, WireGuard). Fingerprinted by Iranian DPI in seconds. We need Reality-class masquerading.
-3. **Corporate billing.** Leaves paper trail. OpenBand targets crypto payments (TON/USDT) for operational anonymity.
+3. **Corporate billing.** Leaves paper trail. OpenBand uses **USDC on Base** for subscriptions — on-chain, pseudonymous, no KYC at the protocol level, easy fiat on-ramp via Coinbase Commerce for non-crypto users. During internet blackouts the service is free (no payment required).
 4. **Marketing + public server lists.** Commercial VPNs advertise their IPs publicly. We do the opposite — lists are kept in flux and never published wholesale.
 
 ## 3. Architecture options
@@ -261,7 +261,7 @@ OpenBand's target positioning is **Psiphon-class censorship resistance with Snow
 ## 10. Open questions
 
 1. **Who operates the bootstrap service?** If it's a single operator, that's a single legal / political attack vector. Consider multi-operator bootstrap with independent instances.
-2. **How do we fund beyond 50 users?** Subscription at $2/month buys 5 GB outbound per user — needs to cover bandwidth overage, scaling infra, operator time. TON/USDT flow is OK, but operator taxation / AML compliance in some jurisdictions is non-trivial.
+2. **How do we fund beyond 50 users?** Today the project is donation-funded (USDC on Base). Subscription launch will be $2/month paid in USDC on Base, covering bandwidth, scaling infrastructure, operator time, and gateway-operator rewards (including Starlink reimbursements for satellite-backed nodes). Free-during-blackout clause is covered from the donation pool regardless of subscription state.
 3. **Can we decentralize exit operation?** Volunteer-run exits require trust (they see encrypted Reality bytes, but they know *who* their clients are). This is a different problem from volunteer gateways (who see destinations). Worth exploring, but non-trivial.
 4. **What's the target user count at v1.0?** Our current infrastructure scales to ~20k users. Above that, we need proper observability, incident-response automation, and likely dedicated DevOps.
 5. **Legal structure?** Running even 5 servers as a project raises questions about liability, especially if users do anything illegal through them. Consider a non-profit structure (similar to Tor Project Inc.) or a jurisdiction-neutral legal entity.

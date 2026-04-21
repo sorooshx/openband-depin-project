@@ -344,7 +344,7 @@ This section is written with deliberate transparency. OpenBand is **pre-beta**. 
 The following are all documented in `SECURITY.md` in the repository as pre-beta blockers:
 
 1. **Hardcoded exit server IP in the binary.** A single block-list addition kills the service for all users until an app update ships. Mitigation plan in `EXIT_INFRASTRUCTURE.md`: dynamic pool of 5–7 servers across 5+ providers, discovered via domain-fronted bootstrap with DoH fallback.
-2. **Shared VLESS UUID.** Reverse-engineered from the APK, a single leaked identifier can be fingerprinted and blocked. Mitigation: per-user UUIDs issued after subscription via Telegram bot; revocable per-user.
+2. **Shared VLESS UUID.** Reverse-engineered from the APK, a single leaked identifier can be fingerprinted and blocked. Mitigation: per-user UUIDs issued after on-chain USDC subscription (or during a blackout-relief window, no subscription required); revocable per-user.
 3. **Salt compiled into the binary.** Anyone with the APK computes tomorrow's SSID and password. This defeats the purpose of daily rotation. Mitigation: salt moves server-side, delivered per-subscription over the encrypted tunnel.
 4. **Single exit server today (strategy already defined).** Single-point-of-failure against IP-level blocking. See `EXIT_INFRASTRUCTURE.md` for the full multi-server strategy: geographic + jurisdictional + provider + ASN + IP-range diversity, automated rotation, and health monitoring. Target: 5–7 concurrent exits.
 5. **Mesh packets unencrypted.** Any attacker on the same LAN captures the topology. Mitigation: v2 of the protocol wraps each datagram in ChaCha20-Poly1305 with a PSK derived from the daily credential.
@@ -403,16 +403,65 @@ Users acquire the mobile app via an out-of-band channel: TestFlight for iOS (dur
 
 ---
 
-## 11. Governance and Operations
+## 11. Governance, Economics, and the Blackout Clause
 
-OpenBand is structured as a **volunteer-operated network with a small operator core**:
+OpenBand is structured as a **volunteer-operated network with a small operator core**. Every component that needs funding is deliberately designed so that funding can come from multiple independent sources — grants, donations, subscriptions, or operator contributions — rather than a single monolithic revenue stream.
 
-- Subscription / token issuance: operator-run, funded by user subscriptions (currently planned to accept TON and USDT, stablecoins favored for durability).
-- Bootstrap broker: operator-run, low-cost.
-- Exit servers: operator-run, paid for by subscriptions.
-- Gateway nodes: volunteer-run. Volunteers can be compensated via subscription token bounties (micropayments for serving traffic), though this complicates the trust model and is a v3 consideration.
+### 11.1 Current phase — donation-funded
 
-The target scale is **thousands of active gateway nodes** to make enumeration economically prohibitive.
+OpenBand today is funded entirely by **donations denominated in USDC on the Base blockchain** (Coinbase's Ethereum L2). Donations cover:
+
+- Exit server hosting costs (5–7 nodes across neutral jurisdictions).
+- Bootstrap broker infrastructure.
+- **Gateway operator rewards** — volunteers running OpenBand gateways receive USDC payouts proportional to the bandwidth they serve and the uptime they maintain. Rewards are on-chain, anonymous, and do not require operators to disclose identity beyond what Base itself requires.
+- **Starlink and satellite-uplink reimbursement** — operators whose gateway is backhauled over Starlink (or other satellite constellations) have their monthly subscription fees reimbursed from the donation pool, making satellite gateways economically viable without requiring operators to absorb the satellite cost personally.
+
+Donation wallet addresses are published through project channels and verifiable on-chain. All disbursements to operators are traceable and auditable by any donor.
+
+### 11.2 Post-launch — USDC-on-Base subscriptions
+
+When OpenBand exits pre-beta, end-user subscriptions will be paid directly in **USDC on Base**:
+
+- **Why Base:** Ethereum L2 with sub-cent transaction fees, native USDC support (Circle's official deployment), trivial fiat on-ramp through Coinbase Commerce for non-crypto users.
+- **Why USDC:** dollar-pegged stablecoin, regulatory clarity in most jurisdictions, zero price-volatility risk for users topping up subscriptions.
+- **What replaces the corporate billing paper trail:** subscriptions are recorded as on-chain events associated with a pseudonymous subscriber key (not a real-world identity). The operator sees "an anonymous subscriber paid X USDC for Y days of service" — no KYC, no credit card, no address.
+- **Target pricing:** USD 2 per month (conservative) to USD 5 per month (comfortable) for unlimited bandwidth. Lower than commercial VPNs because the infrastructure is distributed rather than centrally operated.
+
+TON and other alternatives were evaluated and set aside: Base/USDC has better fiat-ramp UX for end users, wider developer tooling, and lower operational friction for the project operators.
+
+### 11.3 The blackout clause — free access during state-level outages
+
+**When a target region experiences a state-level internet blackout or major circumvention-tool ban, OpenBand is free for users in that region.** Subscriptions are suspended for the duration of the event and a cooldown period after.
+
+This is a humanitarian commitment, not a marketing promise. When people in Iran, Myanmar, or any other target jurisdiction are cut off from the internet during a political event, cost is not the first barrier we want them to encounter.
+
+Operationally, blackouts are detected by cross-referencing multiple independent monitors:
+
+- **[OONI](https://ooni.org/)** — Open Observatory of Network Interference.
+- **[IODA](https://ioda.inetintel.cc.gatech.edu/)** — Internet Outage Detection and Analysis.
+- **[Cloudflare Radar](https://radar.cloudflare.com/)** — real-time traffic anomaly detection.
+- **Kentik**, **Censys**, and on-the-ground operator reports.
+
+When two or more independent signals agree that a region is experiencing a major outage, the project's on-chain contract automatically waives subscriptions for that region's subscribers. During the blackout window, operator rewards continue to be paid from the donation pool to ensure the network stays up precisely when users need it most.
+
+### 11.4 Roles in the network
+
+- **Subscribers** — end users in censored regions. Pay subscriptions in USDC on Base (or are free during blackouts). Anonymous.
+- **Gateway operators** — volunteers running OpenBand gateway software on a Mac, OpenWRT router, or Starlink-connected device. Earn USDC rewards proportional to traffic served.
+- **Exit-server operators** — run VLESS+Reality exit servers in neutral jurisdictions. Paid from subscription + donation pools.
+- **Bootstrap operators** — run CDN-fronted bootstrap services that clients contact on first launch. Low cost, operator-funded or donation-funded.
+- **Donors** — fund the network, especially during pre-launch and during blackout-relief periods.
+
+The target scale is **thousands of active gateway nodes** to make enumeration economically prohibitive for any state adversary.
+
+### 11.5 What we're deliberately not doing
+
+- **No ICO, no token launch, no governance token.** OpenBand uses USDC because it is fit-for-purpose (stable, liquid, widely understood). A new project-specific token would add speculative risk, regulatory complexity, and governance overhead with no compensating benefit for the core mission.
+- **No user data sales.** Ever.
+- **No advertising.** Ever.
+- **No partnerships with data brokers or "insight platforms."** Ever.
+
+Revenue exists to keep the network alive. That is the entirety of the business model.
 
 ---
 

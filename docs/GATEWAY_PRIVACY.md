@@ -187,7 +187,7 @@ Google, Amazon, and Azure all killed direct domain fronting ~2018. Cloudflare an
 - What's the right N for "per-user gateway subset" size? Too small → poor UX when subset is offline. Too large → fast enumeration.
 - WebRTC on RN: [`react-native-webrtc`](https://github.com/react-native-webrtc/react-native-webrtc) is maintained, but fits with our iOS `PacketTunnelProvider` sandbox restrictions?
 - Legal exposure for volunteer gateway operators in the US/EU? Safe-harbor guarantees?
-- Bandwidth compensation for high-usage volunteers — TON/USDT micropayments from user → gateway?
+- Bandwidth compensation for high-usage volunteers — **USDC-on-Base** payouts from the donation pool (and later from subscription revenue), with a Starlink-reimbursement premium for operators running satellite-backed gateways. See WHITEPAPER § 11.1.
 
 ## Work breakdown (rough estimate)
 

@@ -81,10 +81,10 @@ Full strategy document written 2026-04-21. Moves from single-Hetzner-VPS to a **
 
 See [EXIT_INFRASTRUCTURE.md](EXIT_INFRASTRUCTURE.md) for: architecture options, server diversity matrix, incident response, comparison to commercial VPNs.
 
-### C3. Per-user VLESS UUID via Telegram bot
-Bot issues UUID after TON/USDT payment. Server-side allowlist. Revocable per-user.
-**Depends on:** nothing technically; mostly product work.
-**Work:** ~1 week including bot.
+### C3. Per-user VLESS UUID via Telegram bot + USDC/Base subscription
+Bot issues UUID after **USDC-on-Base** subscription payment. Server-side allowlist. Revocable per-user. Free-during-blackout: bot auto-issues without payment when OONI/IODA/Cloudflare Radar confirm a state-level outage in the user's region (see WHITEPAPER § 11.3). Gateway-operator rewards + Starlink reimbursements paid from donation pool today, from subscription pool post-launch.
+**Depends on:** nothing technically; mostly product + on-chain smart contract work.
+**Work:** ~1 week bot + 1 week Base smart contract + frontend = ~2 weeks total.
 
 ### C4. Mesh packets encrypted (ChaCha20-Poly1305)
 Wrap every UDP datagram. PSK derived from daily SSID/password.
@@ -185,9 +185,9 @@ Code is written (`bootstrap/server.js`). Needs:
 Target: GL.iNet GL-MT300N-V2. Runs OpenBand gateway logic + sing-box on MIPS. Solves the "Mac can't share WiFi→WiFi" problem at the hardware layer.
 **Work:** ~2 weeks.
 
-### M2. Telegram bot + TON/USDT subscription (Chat 08)
-Bot flow: `/start` → show plans → user sends crypto → bot issues VLESS UUID + credentials. Ties into C3.
-**Work:** ~1 week.
+### M2. Telegram bot + USDC-on-Base subscription (Chat 08)
+Bot flow: `/start` → show plans → user pays USDC on Base → on-chain payment confirmed → bot issues VLESS UUID + credentials. Ties into C3. Includes blackout-detection auto-waiver logic.
+**Work:** ~2 weeks (bot + Base smart contract + blackout-signal integration).
 
 ### M3. Website openband.io on Vercel (Chat 05)
 Marketing + download page, FAQ, subscription link to Telegram bot.
@@ -237,7 +237,7 @@ When [C6 Snowflake broker](#c6-snowflake-style-rendezvous-broker-architectural-n
 | 05 | Website (openband.io, Vercel) | Pending → M3 |
 | 06 | iOS background VPN | **Closed — won't do.** iOS is foreground-only client. |
 | 07 | Phase 3: ACK + failover + election | Done |
-| 08 | Telegram Bot + TON/USDT subscription | Pending → M2 / C3 |
+| 08 | Telegram Bot + USDC-on-Base subscription | Pending → M2 / C3 |
 | 09 | Mac app as router + Bootstrap server | Done (this session) |
 | 10 | OpenWRT router package (GL.iNet) | Pending → M1 |
 
