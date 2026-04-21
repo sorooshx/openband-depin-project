@@ -1,0 +1,17 @@
+LICENSE — TBD
+
+The OpenBand project has not yet finalized its licensing.
+
+Current intent:
+  • Documentation (this repository) — Creative Commons Attribution 4.0 (CC-BY-4.0)
+  • Source code (in a separate private repository)        — GNU AGPL v3.0
+
+Until a formal LICENSE file is committed, the default is "all rights reserved."
+
+If you need to reuse content from this repository before the license is
+finalized, please open an issue or email the project owner. We intend for the
+documentation to be widely shareable, but we cannot retroactively enforce
+unstated terms.
+
+This placeholder will be replaced with the final license text once the
+legal review is complete.
