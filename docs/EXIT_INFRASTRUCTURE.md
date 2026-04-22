@@ -3,7 +3,7 @@
 **Website:** [https://www.openband.io](https://www.openband.io)
 
 **Status:** architectural direction, not yet implemented.
-**Priority:** Critical — blocks beta to Iran. Expands [ROADMAP C1](ROADMAP.md) + [C2](ROADMAP.md) into a full strategy.
+**Priority:** Critical — blocks pre-beta deployment. Expands [ROADMAP C1](ROADMAP.md) + [C2](ROADMAP.md) into a full strategy.
 
 ---
 
@@ -35,7 +35,7 @@ Commercial VPN providers (NordVPN, ExpressVPN, Mullvad, Proton) operate **pools 
 ### What they do that we should NOT copy
 
 1. **Central login service.** Creates a single high-value target — both for blocking and for legal coercion. OpenBand uses decentralized subscription tokens (signed by broker).
-2. **Standard VPN protocols** (OpenVPN, IKEv2, WireGuard). Fingerprinted by Iranian DPI in seconds. We need Reality-class masquerading.
+2. **Standard VPN protocols** (OpenVPN, IKEv2, WireGuard). Fingerprinted by state-level DPI in seconds. We need Reality-class masquerading.
 3. **Corporate billing.** Leaves paper trail. OpenBand uses **USDC on Base** for subscriptions — on-chain, pseudonymous, no KYC at the protocol level, easy fiat on-ramp via Coinbase Commerce for non-crypto users. During internet blackouts the service is free (no payment required).
 4. **Marketing + public server lists.** Commercial VPNs advertise their IPs publicly. We do the opposite — lists are kept in flux and never published wholesale.
 
@@ -77,7 +77,7 @@ Client picks a server based on: latency probe, server load, user preference for 
 
 **Cons:**
 - Bootstrap endpoint itself becomes a target. Mitigated by:
-  - Domain fronting via CDN (Cloudflare / Fastly — Iran has difficulty blocking these without massive collateral damage).
+  - Domain fronting via CDN (Cloudflare / Fastly — state-level censors have difficulty blocking these without massive collateral damage).
   - Encrypted Client Hello (ECH) where supported.
   - Multi-domain redundancy (3+ bootstrap domains rotated).
 - First-run bootstrap requires at least one working domain. If all bootstrap domains are blocked at once, user is offline.
@@ -87,7 +87,7 @@ Client picks a server based on: latency probe, server load, user preference for 
 Use DNS-over-HTTPS (DoH) to resolve a well-known name like `exits.openband.io` to the current IP set. TTL forces periodic refresh.
 
 **Pros:** universal — every OS understands DNS. Low operational cost. DoH bypasses ISP-level DNS hijacking.
-**Cons:** Iran regularly performs DNS poisoning. Requires clients to pin DoH resolver (e.g., Cloudflare 1.1.1.1). The poisoning risk is why this is supplement-not-primary.
+**Cons:** state-level censors regularly perform DNS poisoning. Requires clients to pin DoH resolver (e.g., Cloudflare 1.1.1.1). The poisoning risk is why this is supplement-not-primary.
 
 ### Option D — Distributed Hash Table (DHT) — (v3.0 consideration)
 
@@ -115,7 +115,7 @@ Diversity across multiple independent dimensions defeats correlated failure. A s
 | Dimension | Recommendation | Rationale |
 |-----------|----------------|-----------|
 | **Geographic country** | Min. 5 countries across 3 continents | Avoids single-jurisdiction blocks |
-| **Legal jurisdiction** | Favor neutral jurisdictions (NL, DE, IS, PA, SG). Avoid Five Eyes (US/UK/CA/AU/NZ) for Iran target. | Limits legal coercion risk |
+| **Legal jurisdiction** | Favor neutral jurisdictions (NL, DE, IS, PA, SG). Avoid Five Eyes (US/UK/CA/AU/NZ) for high-risk target regions. | Limits legal coercion risk |
 | **Hosting provider** | Spread across 5+ providers (Hetzner, OVH, DigitalOcean, Vultr, Contabo, Linode). | Single provider takedown doesn't cascade |
 | **ASN** | Servers in different ASNs (not all Hetzner AS24940, etc.) | ISP-level blocks often target ASN ranges |
 | **IP range** | Different /24 subnets per server | Subnet-level blocks don't cascade |
@@ -135,7 +135,7 @@ With 5 servers across this matrix, a targeted takedown of any single dimension l
 
 ### 5.2 Health monitoring
 
-- **External probes** (preferably from inside Iran via VPN-on-VPS volunteers): every 60s, check each server can complete a VLESS+Reality handshake.
+- **External probes** (preferably from inside the target region via VPN-on-VPS volunteers): every 60s, check each server can complete a VLESS+Reality handshake.
 - **Server-side metrics**: CPU, memory, network, active connection count, bandwidth. Push to a central observability endpoint (Grafana / ClickHouse / SQLite-backed).
 - **Client-reported failure** telemetry (opt-in): if clients report persistent failures reaching server X, flag it for investigation.
 
@@ -143,7 +143,7 @@ With 5 servers across this matrix, a targeted takedown of any single dimension l
 
 | Trigger | Action |
 |---------|--------|
-| Server marked blocked by Iran DPI | Remove from bootstrap list, provision replacement within 4h, terminate old server within 48h |
+| Server marked blocked by state-level DPI | Remove from bootstrap list, provision replacement within 4h, terminate old server within 48h |
 | Quarterly schedule | Rotate 20% of the pool to prevent long-term fingerprinting |
 | Abuse complaints | Rotate within 24h (goodwill with hosting providers) |
 | Subscription renewal | Rotate ~monthly regardless (proactive) |
@@ -170,7 +170,7 @@ With 5 servers across this matrix, a targeted takedown of any single dimension l
 | Bootstrap service (Cloudflare Workers) | $0-5 |
 | Monitoring endpoint (small VPS) | $5-10 |
 | Domain + DoH | $2-5 |
-| Iran-inside probe VPS(s) | $5-10 |
+| In-region probe VPS(s) | $5-10 |
 | Terraform / Ansible tooling | $0 (self-hosted) |
 | **Total baseline** | **$40-80/month** |
 
@@ -207,7 +207,7 @@ Servers are the easy-to-scale cost. Operational complexity (alerts, rotation, in
 - **Gateway-as-adversary** (see [GATEWAY_PRIVACY.md](GATEWAY_PRIVACY.md)). Multi-server doesn't change what a hostile gateway can see — that's the gateway-privacy problem, solved separately.
 - **Client-side compromise.** If the user's phone is compromised, no server architecture saves them.
 - **Protocol fingerprinting.** If DPI can fingerprint Reality handshakes generically (vs VLESS+trojan+shadowsocks), multi-server doesn't help — we need multi-protocol.
-- **Iran's backbone-level TLS block.** If the state decides to block all TLS on port 443 that doesn't go to a known-good whitelist, we're offline regardless of how many servers.
+- **Backbone-level TLS block.** If a state decides to block all TLS on port 443 that doesn't go to a known-good whitelist, we're offline regardless of how many servers.
 
 ### What would need to improve further
 
@@ -250,7 +250,7 @@ OpenBand's target positioning is **Psiphon-class censorship resistance with Snow
 
 ### Phase 3 — Resilience engineering (6 weeks)
 - Per-user tokens (ROADMAP C3) so revocation is per-user.
-- Iran-inside volunteer probes for real-world health monitoring.
+- In-region volunteer probes for real-world health monitoring.
 - Multi-protocol exits on each server (Reality + Trojan + WireGuard).
 - Geo-aware client selection.
 - **Outcome:** Resilient to multi-month sustained blocking pressure.

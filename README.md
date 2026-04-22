@@ -33,9 +33,9 @@ Together, these three make OpenBand a **decentralized, self-organizing, backhaul
 
 ## How it's funded
 
-- **Today (pre-launch):** 100% donation-funded. Donations denominated in **USDC on Base** (Coinbase's Ethereum L2). Donations directly pay gateway-operator rewards, Starlink/satellite reimbursements for operators running satellite-backed nodes, and exit-server hosting costs.
-- **After launch:** subscriptions at ~USD 2/month, paid in USDC on Base — no corporate billing, no KYC, on-chain anonymous payments. No project-specific token, no ICO, no governance coin.
-- **🌍 Free during blackouts:** when Iran (or any target region) experiences a state-level internet blackout or major circumvention-tool ban, OpenBand is free for users in that region for the duration plus a cooldown period. Detected automatically via OONI, IODA, Cloudflare Radar, and operator reports. No price gate when people need this most.
+- **Today (pre-launch):** self-funded by the founding team, as volunteers. No donation intake in operation yet and no subscription revenue — the team pays exit-server and bootstrap costs out of pocket while the system matures.
+- **After launch:** subscriptions at ~USD 2/month (paid in **USDC on Base** — no corporate billing, no KYC, on-chain anonymous) in free-internet countries, plus opt-in donations earmarked for serving users in censored territories. No project-specific token, no ICO, no governance coin.
+- **🌍 Free during blackouts:** when any target region experiences a state-level internet blackout or major circumvention-tool ban, OpenBand is free for users in that region for the duration plus a cooldown period. Detected automatically via OONI, IODA, Cloudflare Radar, and operator reports. No price gate when people need this most.
 - **No ads. No data sales. No "partnerships."** Revenue exists solely to keep the network alive.
 
 ---
@@ -53,7 +53,7 @@ Phones inside a censored region run a small mobile app. The app discovers nearby
 
 ## Why this exists
 
-Iran and similar regimes have made traditional VPN tools increasingly ineffective:
+State-level censors have made traditional VPN tools increasingly ineffective:
 
 - Commercial VPN IPs are enumerated and blocked within days.
 - Protocol fingerprinting (OpenVPN, IKEv2, WireGuard on known ports) is instant.

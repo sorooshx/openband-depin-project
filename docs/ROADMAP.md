@@ -74,12 +74,12 @@ macOS Internet Sharing cannot share WiFi→WiFi. Needs Ethernet upstream.
 
 ---
 
-## Critical (blocks beta-to-Iran)
+## Critical (blocks beta deployment)
 
 ### C1 + C2. Multi-server exit infrastructure — see [EXIT_INFRASTRUCTURE.md](EXIT_INFRASTRUCTURE.md)
 Full strategy document written 2026-04-21. Moves from a single exit VPS to a **dynamic pool of 5-7 servers across 5+ providers in neutral jurisdictions**, discovered via CDN-fronted bootstrap with DoH fallback, rotated on a quarterly + block-triggered schedule.
 
-**Why this is the highest-ROI security investment pre-beta:** closes the single point of failure that a single IP-block attack by Iran could exploit to kill the entire network instantly.
+**Why this is the highest-ROI security investment pre-beta:** closes the single point of failure that a single IP-block attack by a state-level censor could exploit to kill the entire network instantly.
 
 **Phase 1 work (4 weeks):**
 - Terraform modules for 2+ hosting providers
@@ -161,7 +161,7 @@ Phone ────────────────────────�
 - Official libs: `wireguard-android` (AOSP) and `WireGuardKit` (Swift Package)
 
 **Gateway target: OpenWRT first, not macOS** (decided 2026-04-22).
-On macOS, userspace `wireguard-go` requires root to create `utun` devices (SYSPROTO_CONTROL is privileged). A production-quality Mac gateway would require an SMAppService privileged helper with XPC — ~3-4 days extra, and the Mac gateway is a dev-testing convenience, not the production target. On OpenWRT, kernel WireGuard is native and privileged already. The real Iran deployment scenario (Starlink → OpenWRT router → phones on WiFi) also runs on OpenWRT.
+On macOS, userspace `wireguard-go` requires root to create `utun` devices (SYSPROTO_CONTROL is privileged). A production-quality Mac gateway would require an SMAppService privileged helper with XPC — ~3-4 days extra, and the Mac gateway is a dev-testing convenience, not the production target. On OpenWRT, kernel WireGuard is native and privileged already. The real production deployment scenario (Starlink → OpenWRT router → phones on WiFi) also runs on OpenWRT.
 
 So H4c collapses partially into M1: the gateway-side work happens directly on OpenWRT. Mac keeps running legacy SOCKS5 for local dev. Phone-side code is identical either way.
 
@@ -183,12 +183,12 @@ So H4c collapses partially into M1: the gateway-side work happens directly on Op
 - **Keypair lifetime:** per-phone with monthly rotation — simpler UX than per-session, still supports revocation.
 
 **Depends on:** for the OpenWRT terminator, GL.iNet hardware or a Linux VM as a test gateway.
-**Unlocks:** closes Residual Risk A (destinations visible to gateway) for the LAN hop. Matches the real Iran deployment scenario exactly.
+**Unlocks:** closes Residual Risk A (destinations visible to gateway) for the LAN hop. Matches the real production deployment scenario exactly.
 
 ### H5. Zero-touch gateway onboarding (phones auto-find & join)
 Phone opens OpenBand → taps Connect → system auto-joins the OpenBand SSID using pre-computed credentials (`CredentialGenerator` derives today's SSID+password from shared salt + UTC date).
 
-**Why critical:** matches the real Iran deployment scenario (phones have no direct internet, Mac is the only upstream).
+**Why critical:** matches the real production deployment scenario (phones have no direct internet, Mac is the only upstream).
 
 **Status (2026-04-21):**
 - ✅ Android `GatewayScannerModule` shipped — calls `WifiNetworkSuggestion` API on API 29+ (Android 10+). User sees a system notification when the SSID is seen in scan; after approval the phone auto-joins forever.
@@ -288,7 +288,7 @@ When [C6 Snowflake broker](#c6-snowflake-style-rendezvous-broker-architectural-n
 
 **H4 — Blind gateway TCP passthrough.** This is the pivot decided 2026-04-20 after discovering the SOCKS5 design let rogue gateways see every user's destinations. H4 is ~2 days of work and is the highest-ROI security improvement possible short-term.
 
-**After H4:** H5 (zero-touch gateway onboarding, ~4 days) — matches the real Iran scenario where phones have no direct internet and must find + join the Mac's WiFi automatically.
+**After H4:** H5 (zero-touch gateway onboarding, ~4 days) — matches the real production scenario where phones have no direct internet and must find + join the Mac's WiFi automatically.
 
 **Then:** security cluster C1 / C3 / C5 / H3 — dynamic config, per-user UUIDs, server-side salt, bootstrap deployment.
 

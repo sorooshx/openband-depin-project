@@ -3,18 +3,18 @@
 **Website:** [https://www.openband.io](https://www.openband.io)
 
 **Status:** architectural target, not implemented.
-**Priority:** Critical (C6 in [ROADMAP.md](ROADMAP.md)) — blocks beta to Iran.
+**Priority:** Critical (C6 in [ROADMAP.md](ROADMAP.md)) — blocks pre-beta deployment.
 
 > **Prerequisite:** the [blind-gateway TCP passthrough pivot](SECURITY.md#gateway-as-adversary-threat-model) (H4). That change ensures a gateway can't read destinations or content. The broker design below builds on top — it additionally hides *which gateway* the user is using and adds onion-routing for timing-analysis resistance.
 
 ## Why this document exists
 
-[SECURITY.md](SECURITY.md) covers the single-exit-server case (protecting the project's own exit IPs). That problem is solvable by rotation + domain-fronted bootstrap. This document covers the **harder** problem: protecting the IPs of **volunteer gateway nodes** — the people running OpenBand on their Mac, router, or Starlink-connected device outside Iran who relay traffic for users inside Iran.
+[SECURITY.md](SECURITY.md) covers the single-exit-server case (protecting the project's own exit IPs). That problem is solvable by rotation + domain-fronted bootstrap. This document covers the **harder** problem: protecting the IPs of **volunteer gateway nodes** — the people running OpenBand on their Mac, router, or Starlink-connected device outside the censored region who relay traffic for users inside it.
 
 Once volunteer gateways exist, the failure mode is different:
 
 - **Exit server compromise:** we rotate our server; users get new IPs from bootstrap.
-- **Volunteer gateway compromise:** that person's IP is now on a blocklist forever, may be DDoSed, may face legal/social pressure if they're an Iranian expat, and the network loses throughput. If the gov enumerates many volunteer IPs, the whole relay pool dies.
+- **Volunteer gateway compromise:** that person's IP is now on a blocklist forever, may be DDoSed, may face legal/social pressure (especially if they're a diaspora operator with family in the target region), and the network loses throughput. If the gov enumerates many volunteer IPs, the whole relay pool dies.
 
 Protecting volunteer IPs is the central unsolved problem of every censorship-resistance project (Tor, Snowflake, Psiphon, Lantern, Shadowsocks). There is no silver bullet. **The goal is to raise the cost of enumeration** so gov can't cheaply burn every gateway.
 
@@ -37,7 +37,7 @@ Extends [SECURITY.md § Threat model](SECURITY.md#threat-model):
 - Download the app freely and reverse it.
 - Subscribe as a real paying user.
 - Run gateways and clients simultaneously.
-- Passively observe network traffic at any ISP in Iran.
+- Passively observe network traffic at any ISP in the target region.
 
 **What the adversary cannot do (assumptions):**
 - Break TLS 1.3 with modern ciphers.
@@ -53,7 +53,7 @@ Each layer is meaningful even if outer layers fail.
 ### L1. Clients never learn gateway IPs directly (rendezvous broker)
 Client connects to a CDN-fronted broker. Broker authenticates the user, returns a signed WebRTC offer for *one* available gateway. Client + gateway establish direct P2P over WebRTC. Network observer sees only CDN traffic + encrypted P2P. Gateway IP is revealed only inside the ICE handshake, only to an authenticated client.
 
-**This is how [Snowflake](https://snowflake.torproject.org/) (Tor) works.** It has survived sustained Iranian/Chinese blocking attempts since 2019.
+**This is how [Snowflake](https://snowflake.torproject.org/) (Tor) works.** It has survived sustained state-level blocking attempts since 2019.
 
 ### L2. Many small gateways, high churn
 Target: hundreds of volunteer gateways, each serving 5–50 users. One burned = tiny blast radius. Residential IPs rotate naturally via DHCP; broker re-rolls the available pool every ~10 minutes.
@@ -85,7 +85,7 @@ A volunteer gateway that suddenly sees 1000 connections/minute from new clients 
 ```
 ┌─────────────────┐       ┌──────────────────┐       ┌─────────────────┐
 │  Client (RN)    │       │  Broker          │       │  Volunteer       │
-│  Iran           │       │  CDN-fronted     │       │  gateway         │
+│  censored region│       │  CDN-fronted     │       │  gateway         │
 │                 │       │  (Cloudflare     │       │  (Mac / router)  │
 │                 │       │   Worker)        │       │                  │
 └────────┬────────┘       └────────┬─────────┘       └────────┬────────┘

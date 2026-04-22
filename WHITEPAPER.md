@@ -8,7 +8,7 @@
 
 ## Abstract
 
-OpenBand is a censorship-circumvention system targeting users in jurisdictions with state-level traffic filtering, with a specific focus on Iran. The architecture rests on three mutually reinforcing pillars:
+OpenBand is a censorship-circumvention system targeting users in jurisdictions with state-level traffic filtering. The architecture rests on three mutually reinforcing pillars:
 
 1. **DePIN (Decentralized Physical Infrastructure Network)** — gateways are a distributed pool of volunteer-operated devices (Mac laptops, OpenWRT routers, satellite-connected nodes) rather than a centrally-owned server fleet. No single operator, company, or jurisdiction controls the network.
 2. **Local-area mesh networking** — phones inside a censored region discover nearby gateways over UDP broadcast, elect one automatically by score, and tunnel traffic through it. Zero user configuration, no pre-shared knowledge of gateway IPs.
@@ -22,7 +22,7 @@ This document describes the threat model, architecture, mesh protocol, gateway t
 
 ## 1. Introduction
 
-State-level internet filtering in Iran (and similar regimes) has intensified since 2022. The Islamic Republic blocks most Western platforms, throttles TLS traffic to unknown destinations, fingerprints VPN protocols, and pressures ISPs to identify users of popular circumvention tools. Commercial VPNs centralize risk on a small number of exit IPs that are enumerated and blocked within days of launch. Tor's bridges are regularly discovered via active probing. Most existing tools optimize for either throughput *or* resistance, not both.
+State-level internet filtering has intensified globally since 2022. Authorities in censorship-heavy jurisdictions block most Western platforms, throttle TLS traffic to unknown destinations, fingerprint VPN protocols, and pressure ISPs to identify users of popular circumvention tools. Commercial VPNs centralize risk on a small number of exit IPs that are enumerated and blocked within days of launch. Tor's bridges are regularly discovered via active probing. Most existing tools optimize for either throughput *or* resistance, not both.
 
 OpenBand takes a different approach. Instead of hiding a small number of high-value servers, we distribute the exit surface across **a DePIN-style network of volunteer-operated gateway nodes** (Mac laptops, OpenWRT routers, Starlink-connected terminals, etc. running in uncensored — or *less*-censored — jurisdictions), reached by phones inside the target region through a **local WiFi mesh**. Crucially, those gateway nodes can backhaul via **satellite** (Starlink, Iridium) in addition to traditional ISPs, removing the national-border chokepoint that terrestrial circumvention tools depend on. The adversary's task shifts from "block one IP" to "enumerate and block thousands of residential IPs plus block LEO satellite constellations" — expensive, constantly moving, and in the satellite case, geopolitically impossible. This is the strategy that has kept Tor's Snowflake pluggable transport viable for years, extended with satellite backhaul and DePIN incentive alignment.
 
@@ -90,7 +90,7 @@ The novel contributions of OpenBand are:
 
 1. **Mobile-first mesh.** Smartphones elect a local gateway automatically via UDP multicast discovery; users do not configure anything.
 2. **End-to-end exit crypto even across volunteer hops.** The Reality handshake is (or will be) between the user's phone and the exit server — volunteer gateways act as byte-pipes when possible.
-3. **Zero-touch onboarding** via OS-native WiFi suggestion APIs (WifiNetworkSuggestion / NEHotspotConfigurationManager), matching production Iran scenarios where users have no direct internet.
+3. **Zero-touch onboarding** via OS-native WiFi suggestion APIs (WifiNetworkSuggestion / NEHotspotConfigurationManager), matching production deployment scenarios where users have no direct internet.
 
 ---
 
@@ -180,7 +180,7 @@ This is implemented identically in three languages:
 - **iOS 11+** uses `NEHotspotConfigurationManager.apply()`. Same UX pattern: the configuration is stored, a prompt appears when the SSID is in range, and the phone auto-associates thereafter.
 - **Android 6–9** — auto-join is not possible due to OS restrictions on third-party WiFi manipulation. Users on these devices must join the network manually through system settings.
 
-The point is: users in Iran do not need to memorize anything. Installing the app is the entire setup.
+The point is: users in censored regions do not need to memorize anything. Installing the app is the entire setup.
 
 ---
 
@@ -408,16 +408,26 @@ Users acquire the mobile app via an out-of-band channel: TestFlight for iOS (dur
 
 OpenBand is structured as a **volunteer-operated network with a small operator core**. Every component that needs funding is deliberately designed so that funding can come from multiple independent sources — grants, donations, subscriptions, or operator contributions — rather than a single monolithic revenue stream.
 
-### 11.1 Current phase — donation-funded
+### 11.1 Current phase — team-funded, pre-launch
 
-OpenBand today is funded entirely by **donations denominated in USDC on the Base blockchain** (Coinbase's Ethereum L2). Donations cover:
+OpenBand today is funded entirely by the **founding team, as volunteers**. There is no donation intake in operation yet, no subscription revenue, no investor funding, and no token. The core team pays the exit-server and bootstrap-infrastructure costs out of pocket while the system matures to the point where it can responsibly accept outside support.
 
-- Exit server hosting costs (5–7 nodes across neutral jurisdictions).
-- Bootstrap broker infrastructure.
-- **Gateway operator rewards** — volunteers running OpenBand gateways receive USDC payouts proportional to the bandwidth they serve and the uptime they maintain. Rewards are on-chain, anonymous, and do not require operators to disclose identity beyond what Base itself requires.
-- **Starlink and satellite-uplink reimbursement** — operators whose gateway is backhauled over Starlink (or other satellite constellations) have their monthly subscription fees reimbursed from the donation pool, making satellite gateways economically viable without requiring operators to absorb the satellite cost personally.
+This phase is deliberately self-constrained. Accepting donations or subscription payments before the security posture can protect paying users at scale would be a mis-step. When the pre-beta blockers in § 12 are closed, the funding model transitions to the post-launch structure below.
 
-Donation wallet addresses are published through project channels and verifiable on-chain. All disbursements to operators are traceable and auditable by any donor.
+### 11.1.1 Planned funding intakes (post-launch)
+
+Two independent intakes, both denominated in **USDC on Base** (Coinbase's Ethereum L2):
+
+1. **Subscriptions** from users in free-internet jurisdictions (see § 11.2 for the detailed terms). Recurring, opt-in, ~USD 2–5 per month.
+2. **Donations earmarked for censored-territory service.** Donors anywhere can contribute to the pool that pays for free access in regions where OpenBand is offered free by principle (see § 11.3). On-chain, traceable, auditable.
+
+Post-launch, both intakes fund the same three cost centers:
+
+- **Exit-server hosting** (5–7 nodes across neutral jurisdictions).
+- **Gateway operator rewards** — volunteers running OpenBand gateways receive USDC payouts proportional to bandwidth served and uptime. Rewards are on-chain, anonymous, and do not require operators to disclose identity beyond what Base itself requires.
+- **Starlink / satellite-uplink reimbursement** — operators whose gateway is backhauled over a satellite constellation have their monthly subscription fee reimbursed from the pool, making satellite-backed gateways economically viable for volunteers.
+
+Donation wallet addresses will be published through project channels and verifiable on-chain. All disbursements to operators will be traceable and auditable by any donor.
 
 ### 11.2 Post-launch — USDC-on-Base subscriptions
 
@@ -434,7 +444,7 @@ TON and other alternatives were evaluated and set aside: Base/USDC has better fi
 
 **When a target region experiences a state-level internet blackout or major circumvention-tool ban, OpenBand is free for users in that region.** Subscriptions are suspended for the duration of the event and a cooldown period after.
 
-This is a humanitarian commitment, not a marketing promise. When people in Iran, Myanmar, or any other target jurisdiction are cut off from the internet during a political event, cost is not the first barrier we want them to encounter.
+This is a humanitarian commitment, not a marketing promise. When people in any target jurisdiction are cut off from the internet during a political event, cost is not the first barrier we want them to encounter.
 
 Operationally, blackouts are detected by cross-referencing multiple independent monitors:
 
@@ -443,7 +453,7 @@ Operationally, blackouts are detected by cross-referencing multiple independent 
 - **[Cloudflare Radar](https://radar.cloudflare.com/)** — real-time traffic anomaly detection.
 - **Kentik**, **Censys**, and on-the-ground operator reports.
 
-When two or more independent signals agree that a region is experiencing a major outage, the project's on-chain contract automatically waives subscriptions for that region's subscribers. During the blackout window, operator rewards continue to be paid from the donation pool to ensure the network stays up precisely when users need it most.
+When two or more independent signals agree that a region is experiencing a major outage, the project's on-chain contract automatically waives subscriptions for that region's subscribers. During the blackout window, operator rewards continue to be paid from the earmarked-donations pool (and, during the team-funded phase, from the team's own runway) to ensure the network stays up precisely when users need it most.
 
 ### 11.4 Roles in the network
 
@@ -451,7 +461,7 @@ When two or more independent signals agree that a region is experiencing a major
 - **Gateway operators** — volunteers running OpenBand gateway software on a Mac, OpenWRT router, or Starlink-connected device. Earn USDC rewards proportional to traffic served.
 - **Exit-server operators** — run VLESS+Reality exit servers in neutral jurisdictions. Paid from subscription + donation pools.
 - **Bootstrap operators** — run CDN-fronted bootstrap services that clients contact on first launch. Low cost, operator-funded or donation-funded.
-- **Donors** — fund the network, especially during pre-launch and during blackout-relief periods.
+- **Donors** — post-launch, fund the network by contributing to the earmarked pool that pays for free access in censored territories and blackout-relief. (No donation intake in operation yet — the team self-funds until post-launch.)
 
 The target scale is **thousands of active gateway nodes** to make enumeration economically prohibitive for any state adversary.
 
@@ -497,7 +507,7 @@ A publishable v1.0 beta requires the seven pre-beta blockers to be closed. Our i
 
 One legitimate critique: publishing a whitepaper for a tool the state wants to block seems counterproductive. We think the opposite, for three reasons:
 
-1. **The adversary already knows the broad approach.** Tor, Snowflake, Psiphon, Lantern, and others have publicly documented similar designs for years, and the Iranian government has invested heavily in countering them. Keeping *our* specific architecture private does not materially disadvantage an adversary who has studied the field.
+1. **The adversary already knows the broad approach.** Tor, Snowflake, Psiphon, Lantern, and others have publicly documented similar designs for years, and state-level censors have invested heavily in countering them. Keeping *our* specific architecture private does not materially disadvantage an adversary who has studied the field.
 2. **Security through obscurity is not a defense.** Every meaningful security property of OpenBand comes from cryptographic primitives and protocol design, not secrecy of design. If someone can defeat us by reading this document, the design is insufficient regardless.
 3. **Public review improves the system.** Anti-censorship tools that have been peer-reviewed by the security community (Tor, Signal, Tails) are more robust than tools built behind closed doors. We invite scrutiny.
 

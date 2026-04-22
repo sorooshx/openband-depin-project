@@ -4,7 +4,7 @@
 
 ## Threat model
 
-**Adversary:** Iranian state-level actor with
+**Adversary:** a state-level actor with
 - Deep packet inspection on all transit ISPs
 - Ability to block arbitrary IPs, ASNs, SNIs
 - Ability to binary-reverse any shipped APK/IPA
@@ -140,7 +140,7 @@ Gateway can silently log all metadata and upload it to the adversary later (once
 ## Mitigated issues
 
 ### VLESS+Reality is the exit
-TLS-in-TLS with a real SNI — traffic is indistinguishable from a legitimate TLS session to a major HTTPS service. Iran DPI can't distinguish the handshake from a real TLS session. Masquerade target rotates and is not documented publicly. Known good as of 2026-04.
+TLS-in-TLS with a real SNI — traffic is indistinguishable from a legitimate TLS session to a major HTTPS service. State-level DPI can't distinguish the handshake from a real TLS session. Masquerade target rotates and is not documented publicly. Known good as of 2026-04.
 
 ### Multicast leakage via TUN
 Early Android builds allowed mesh UDP multicast to go through the VPN tunnel, leaking node IDs upstream. Fixed in `XrayVpnService.kt` by excluding `224.0.0.0/4` and `255.255.255.255` from the VPN routing table.
@@ -173,8 +173,8 @@ Each layer is meaningful even if an outer one is compromised.
 
 ## Incident response playbook
 
-### Server IP appears blocked in Iran
-1. Monitor: user reports + exit-node RTT from inside Iran (via friend/VPN).
+### Server IP appears blocked by a state-level censor
+1. Monitor: user reports + exit-node RTT from inside the target region (via friend/VPN).
 2. Rotate: spin up a new exit VPS, update bootstrap server's server list.
 3. Clients auto-refresh server list on next bootstrap poll (every 10min).
 4. Old IP stays alive for 24h as fallback.
@@ -202,4 +202,4 @@ Security issues: email `soroushosivand@gmail.com` privately. **Do not** file a p
 
 ## Disclaimer
 
-OpenBand is pre-beta. The security posture is appropriate for **internal testing on trusted WiFi**, not for real use by users in Iran facing actual state-level threats. Nobody should ship this to production users until every item in [this checklist](#critical-issues-must-fix-before-beta) is ✅.
+OpenBand is pre-beta. The security posture is appropriate for **internal testing on trusted WiFi**, not for real use by users in censored regions facing actual state-level threats. Nobody should ship this to production users until every item in [this checklist](#critical-issues-must-fix-before-beta) is ✅.

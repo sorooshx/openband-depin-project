@@ -201,7 +201,7 @@ Subscribed in `src/services/VpnService.ts`, bridged to Zustand in `src/store/use
 
 ## Versioning
 
-- **v1** (current) — unencrypted JSON. **Do not ship to Iran.** A passive WiFi sniffer sees the whole mesh topology.
+- **v1** (current) — unencrypted JSON. **Do not ship to production.** A passive WiFi sniffer sees the whole mesh topology.
 - **v2** (planned) — wrap each datagram in ChaCha20-Poly1305 with a pre-shared key derived from daily rotating SSID+password. Adds 28 bytes overhead (12 nonce + 16 tag).
 - **v3** (speculative) — full Noise protocol handshake between nodes; per-session keys.
 
