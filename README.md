@@ -72,7 +72,7 @@ This is a **public documentation and whitepaper repository**. The source code of
 openband-depin-project/
 ├── README.md                          ← you are here
 ├── WHITEPAPER.md                      ← single-doc system overview
-├── LICENSE                            ← TBD (CC-BY-4.0 for docs, AGPL-3.0 for code)
+├── LICENSE                            ← CC-BY-4.0 for docs; source code is separate + proprietary
 └── docs/
     ├── ARCHITECTURE.md                ← system design + diagrams
     ├── SECURITY.md                    ← threat model + residual risks
@@ -146,8 +146,11 @@ Mistakes are ours; foundations are theirs.
 
 ## License
 
-Documentation: **CC-BY-4.0** (free to share and adapt with attribution).
-Source code (private repo): **AGPL-3.0** (target).
+**Documentation, whitepaper, and protocol specifications** (this repository): **CC-BY-4.0** — free to share and adapt with attribution. We actively encourage interoperability research and academic review.
+
+**Source code** (the OpenBand mobile apps, gateway software, and exit-server configuration): **proprietary · all rights reserved**. The source lives in separate private repositories and is not published. Independent security auditors may request NDA-gated access by emailing the project owner. This may change post-launch; our current priority is hardening before opening.
+
+**Why not source-available / MIT?** Pre-launch the project is small and copy-risk outweighs trust-gain; we protect it under copyright. Post-launch, after the security posture matures and a sustainable funding model is in place, we may revisit with a source-available license (e.g., BUSL or PolyForm Noncommercial). The whitepaper and threat model are public precisely so users do not have to trust proprietary code blindly — the claims are documented, falsifiable, and testable.
 
 See [LICENSE](LICENSE) for final terms.
 

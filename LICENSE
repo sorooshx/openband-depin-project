@@ -1,17 +1,95 @@
-LICENSE — TBD
+OpenBand — Licensing
+=====================
 
-The OpenBand project has not yet finalized its licensing.
+This repository contains **documentation, whitepaper, and protocol
+specifications** for the OpenBand project. The **source code** for the
+OpenBand mobile apps, gateway software, and exit-server configuration
+is NOT in this repository and is not currently published.
 
-Current intent:
-  • Documentation (this repository) — Creative Commons Attribution 4.0 (CC-BY-4.0)
-  • Source code (in a separate private repository)        — GNU AGPL v3.0
+Two separate licenses apply. Read carefully.
 
-Until a formal LICENSE file is committed, the default is "all rights reserved."
 
-If you need to reuse content from this repository before the license is
-finalized, please open an issue or email the project owner. We intend for the
-documentation to be widely shareable, but we cannot retroactively enforce
-unstated terms.
+1. Documentation, whitepaper, protocol specifications (this repository)
+────────────────────────────────────────────────────────────────────────
 
-This placeholder will be replaced with the final license text once the
-legal review is complete.
+Licensed under the Creative Commons Attribution 4.0 International
+License ("CC-BY-4.0").
+
+You are free to:
+
+  • Share   — copy and redistribute the material in any medium or
+              format, for any purpose, including commercially.
+  • Adapt   — remix, transform, and build upon the material, for
+              any purpose, including commercially.
+
+Under the following terms:
+
+  • Attribution — You must give appropriate credit ("OpenBand Project,
+    https://www.openband.io"), provide a link to the license, and
+    indicate if changes were made. You may do so in any reasonable
+    manner, but not in any way that suggests the licensor endorses
+    you or your use.
+
+  • No additional restrictions — You may not apply legal terms or
+    technological measures that legally restrict others from doing
+    anything the license permits.
+
+Full license text:  https://creativecommons.org/licenses/by/4.0/legalcode
+
+Notices:
+  • No warranties are given.
+  • The license may not give you all of the permissions necessary
+    for your intended use. Other rights such as publicity, privacy,
+    or moral rights may limit how you use the material.
+
+
+2. OpenBand source code (separate private repositories)
+────────────────────────────────────────────────────────
+
+The source code for the OpenBand mobile apps, macOS gateway app,
+gateway daemon, exit-server configuration, and supporting tooling
+is **proprietary** and **all rights reserved**.
+
+Copyright (c) 2026 OpenBand Project. All rights reserved.
+
+This source code is not published. No license is granted to use,
+copy, modify, distribute, reverse-engineer, or create derivative
+works of the source code. Possession of any portion of the source
+code without explicit written permission from the copyright holder
+is prohibited.
+
+Pre-launch, we have deliberately chosen to keep the implementation
+closed because the project is small, copy-risk is high, and the
+trust signals we offer to users (published threat model, published
+protocol specs, planned independent audit) do not require
+source-availability.
+
+**Independent security researchers and formal auditors** may request
+read-only access under NDA by emailing the project owner via the
+contact listed on https://www.openband.io. We welcome adversarial
+review and will work in good faith with anyone who signs the
+confidentiality agreement.
+
+Post-launch, once the security posture matures and a sustainable
+funding model is in place, we may migrate to a source-available
+license (for example, a Business Source License or PolyForm
+Noncommercial) that makes the code readable and auditable without
+granting commercial-reuse rights. This is a plan, not a promise.
+
+
+3. Trademarks
+─────────────
+
+"OpenBand" and the OpenBand logo are trademarks of the OpenBand
+project. The CC-BY-4.0 license above applies to the written content
+of this repository; it does not grant rights to use the trademarks.
+
+
+Contact
+───────
+
+Questions about licensing, requests for source-code audit access,
+and general inquiries: https://www.openband.io
+
+For security vulnerability reports, please use the mechanism
+described in README.md § Security reporting.

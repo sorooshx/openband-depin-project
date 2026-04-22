@@ -33,7 +33,7 @@ OpenBand is implemented as:
 - A planned **OpenWRT router package** for dedicated always-on gateways
 - **Exit servers** running VLESS+Reality on standard ports
 
-The codebase is open-source (target: public GitHub in beta phase). The security claims in this document are bounded by what is currently implemented — we explicitly separate shipped guarantees from planned ones.
+The codebase is **proprietary** (all rights reserved) during pre-launch. Documentation, whitepaper, and protocol specifications are public under **CC-BY-4.0**. The security claims in this document are bounded by what is currently implemented — we explicitly separate shipped guarantees from planned ones. The threat model is published so users (and auditors) are not asked to trust binary code blindly: every claim is documented and testable against the public specs.
 
 ---
 
@@ -471,6 +471,7 @@ The target scale is **thousands of active gateway nodes** to make enumeration ec
 - **No user data sales.** Ever.
 - **No advertising.** Ever.
 - **No partnerships with data brokers or "insight platforms."** Ever.
+- **No source-code publication during pre-launch.** The implementation is proprietary. We have chosen to lean on the public threat model, public protocol specifications, and (post-launch) independent audits for trust — not on source availability. This is a deliberate tradeoff: we believe copy-risk outweighs the incremental trust gained from publishing code *before* the security posture hardens. Post-launch we may migrate to a source-available license; see `LICENSE` in the public docs repository.
 
 Revenue exists to keep the network alive. That is the entirety of the business model.
 
