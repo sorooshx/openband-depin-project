@@ -10,7 +10,7 @@
 
 OpenBand is a censorship-circumvention system targeting users in jurisdictions with state-level traffic filtering. The architecture rests on three mutually reinforcing pillars:
 
-1. **DePIN (Decentralized Physical Infrastructure Network)** — gateways are a distributed pool of volunteer-operated devices (Mac laptops, OpenWRT routers, satellite-connected nodes) rather than a centrally-owned server fleet. No single operator, company, or jurisdiction controls the network.
+1. **DePIN (Decentralized Physical Infrastructure Network)** — gateways are a distributed pool of volunteer-operated devices, primarily **OpenWRT routers** (with Starlink, fiber, or LTE upstream), supplemented by Mac laptops in development environments. No single operator, company, or jurisdiction controls the network.
 2. **Local-area mesh networking** — phones inside a censored region discover nearby gateways over UDP broadcast, elect one automatically by score, and tunnel traffic through it. Zero user configuration, no pre-shared knowledge of gateway IPs.
 3. **Satellite and alternative uplinks** — gateway nodes can route upstream through any non-terrestrial path (Starlink, Iridium, and other LEO/MEO services) in addition to fiber, cable, and cellular. A state adversary controls its border infrastructure but cannot block satellite orbits.
 
@@ -24,13 +24,13 @@ This document describes the threat model, architecture, mesh protocol, gateway t
 
 State-level internet filtering has intensified globally since 2022. Authorities in censorship-heavy jurisdictions block most Western platforms, throttle TLS traffic to unknown destinations, fingerprint VPN protocols, and pressure ISPs to identify users of popular circumvention tools. Commercial VPNs centralize risk on a small number of exit IPs that are enumerated and blocked within days of launch. Tor's bridges are regularly discovered via active probing. Most existing tools optimize for either throughput *or* resistance, not both.
 
-OpenBand takes a different approach. Instead of hiding a small number of high-value servers, we distribute the exit surface across **a DePIN-style network of volunteer-operated gateway nodes** (Mac laptops, OpenWRT routers, Starlink-connected terminals, etc. running in uncensored — or *less*-censored — jurisdictions), reached by phones inside the target region through a **local WiFi mesh**. Crucially, those gateway nodes can backhaul via **satellite** (Starlink, Iridium) in addition to traditional ISPs, removing the national-border chokepoint that terrestrial circumvention tools depend on. The adversary's task shifts from "block one IP" to "enumerate and block thousands of residential IPs plus block LEO satellite constellations" — expensive, constantly moving, and in the satellite case, geopolitically impossible. This is the strategy that has kept Tor's Snowflake pluggable transport viable for years, extended with satellite backhaul and DePIN incentive alignment.
+OpenBand takes a different approach. Instead of hiding a small number of high-value servers, we distribute the exit surface across **a DePIN-style network of volunteer-operated gateway nodes** (OpenWRT routers and Starlink-connected terminals as the primary deployment, Mac laptops for development, running in uncensored — or *less*-censored — jurisdictions), reached by phones inside the target region through a **local WiFi mesh**. Crucially, those gateway nodes can backhaul via **satellite** (Starlink, Iridium) in addition to traditional ISPs, removing the national-border chokepoint that terrestrial circumvention tools depend on. The adversary's task shifts from "block one IP" to "enumerate and block thousands of residential IPs plus block LEO satellite constellations" — expensive, constantly moving, and in the satellite case, geopolitically impossible. This is the strategy that has kept Tor's Snowflake pluggable transport viable for years, extended with satellite backhaul and DePIN incentive alignment.
 
 OpenBand is implemented as:
 
-- A **React Native mobile app** (Android 10+, iOS 11+)
-- A **SwiftUI macOS app** that acts as a gateway node
-- A planned **OpenWRT router package** for dedicated always-on gateways
+- A **React Native mobile app** (Android 10+, iOS 11+) — **client only** on iOS by design; Android can additionally act as an ephemeral hotspot egress in blackout-mode (Phase 3, optional)
+- A **SwiftUI macOS app** that acts as a gateway node for development and small-scale testing
+- An **OpenWRT router package** for dedicated always-on gateways — the primary production deployment target (in active development, see Roadmap § H4c / M1)
 - **Exit servers** running VLESS+Reality on standard ports
 
 The codebase is **proprietary** (all rights reserved) during pre-launch. Documentation, whitepaper, and protocol specifications are public under **CC-BY-4.0**. The security claims in this document are bounded by what is currently implemented — we explicitly separate shipped guarantees from planned ones. The threat model is published so users (and auditors) are not asked to trust binary code blindly: every claim is documented and testable against the public specs.
@@ -83,7 +83,7 @@ OpenBand borrows from several lines of research and engineering:
 | **VLESS + Reality** (Xray / sing-box) | Exit protocol — TLS-in-TLS masquerading as a real destination SNI; resists active probing |
 | **meek / Psiphon** | CDN-fronted control channel |
 | **Shadowsocks** | Lightweight encrypted tunnel baseline |
-| **WireGuard** | Modern, minimal encrypted transport (planned for gateway-to-phone hop) |
+| **WireGuard** | Phone↔gateway LAN-hop encryption with nested Reality end-to-end (H4c, in progress); inter-router fabric encryption (M2) |
 | **Briar / Secure Messenger projects** | Mesh networking and discovery over local radio |
 
 The novel contributions of OpenBand are:
@@ -112,11 +112,11 @@ The novel contributions of OpenBand are:
 │                  ▼                                             │
 │  ┌──────────────────────────────────────────────┐              │
 │  │  Gateway node                                │              │
-│  │  (Mac laptop, OpenWRT router, Linux daemon)  │              │
+│  │  (OpenWRT router primary; Mac for dev only)  │              │
 │  │  ├─ Mesh discovery                           │              │
-│  │  ├─ SOCKS5 relay (current) or byte-forwarder │              │
-│  │  │    (planned) on LAN                       │              │
-│  │  └─ VLESS+Reality client to exit server      │              │
+│  │  ├─ WireGuard inbound (LAN hop, blind) — or  │              │
+│  │  │    legacy SOCKS5 on Mac dev gateway       │              │
+│  │  └─ Forwards opaque Reality bytes to exit    │              │
 │  └──────────────────────┬───────────────────────┘              │
 │                         │                                      │
 └─────────────────────────┼──────────────────────────────────────┘
@@ -135,20 +135,24 @@ The novel contributions of OpenBand are:
 
 ### 4.2 Node roles
 
-- **Client.** A user's phone (Android 10+, iOS 11+). Discovers nearby nodes, participates in gateway election, tunnels traffic through the elected gateway.
-- **Gateway.** A device with reliable internet upstream (outside the censored region, ideally). Runs the mesh protocol, accepts tunnel connections from clients, forwards to an exit server. Implemented today as a Mac app; planned as an OpenWRT router package and a Linux daemon.
+- **Client.** A user's phone (Android 10+, iOS 11+). Discovers nearby gateways, picks the nearest one, tunnels traffic through it. Phones never participate in routing the traffic of *other* users — they are leaf nodes by design.
+- **Gateway.** A device with reliable internet upstream (outside the censored region, ideally) and the ability to accept inbound LAN connections. Runs the mesh protocol, accepts WireGuard tunnels from clients on the LAN, forwards opaque Reality bytes to an exit server. The production target is an **OpenWRT router** (kernel WireGuard, low-power, always-on); a Mac app exists for development; a Python reference daemon implements the same protocol for Linux VMs and OpenWRT.
 - **Exit server.** A VPS running VLESS+Reality. Current implementation uses a single operator-controlled VPS; production design requires multiple exits in multiple jurisdictions (see roadmap).
 - **Bootstrap service.** A CDN-fronted HTTPS service that the mobile app contacts on first launch to learn about available exit servers. Written but not yet deployed.
+
+**Why iPhones are client-only — permanently.** Apple's NetworkExtension sandbox blocks `listen()` and reliable background networking required for the gateway role. This is an OS architectural constraint, not a missing entitlement or a future enhancement. iPhones run mesh discovery and the H4c WireGuard outbound; they never accept inbound LAN connections from other users. This is decided and stable.
+
+**Why Android phone-as-gateway is a Phase 3 fallback, not the primary path.** Android can technically host an inbound WG endpoint via a userspace engine, but battery, thermal, single-radio, and carrier-tethering policy realities make it a poor permanent gateway. Android phones can opt into an *ephemeral hotspot egress* mode for outage scenarios — useful when the local OpenWRT/Starlink dies and a volunteer flips their phone to hotspot to keep the cell online. This is a deliberate optional feature, not the deployment story.
 
 ### 4.3 Platform support matrix
 
 | Platform | Client role | Gateway role |
 |----------|-------------|--------------|
-| Android 10+ | ✅ Full (foreground + background mesh) | ⚠️ Partial (works but not production-grade) |
+| Android 10+ | ✅ Full (foreground + background mesh) | ⚠️ Phase 3 ephemeral-hotspot fallback only — not the production path |
 | Android 6–9 | ⚠️ Client only, manual WiFi join (OS restriction) | Not supported |
-| iOS 11+ | ✅ Foreground client | ❌ Not supported (NE extension sandbox restrictions) |
-| macOS | ✅ (via the Mac app as a client too) | ✅ Primary gateway platform today |
-| OpenWRT routers | Not applicable | 🚧 Planned — GL.iNet GL-MT300N-V2 reference hardware |
+| iOS 11+ | ✅ Foreground client | ❌ **Never** — Apple NE-sandbox blocks `listen()`; architectural constraint, not a workaround target |
+| macOS | ✅ (via the Mac app as a client too) | ✅ Development gateway only — not for production |
+| OpenWRT routers (kernel WireGuard) | Not applicable | 🎯 **Primary production gateway** — daemon scaffolded (Python reference implementation), `.ipk` package in M1 |
 
 ---
 
@@ -250,35 +254,55 @@ The single most important design decision in OpenBand is: **we do not trust gate
 
 A gateway operator is whoever is running the gateway software — a volunteer, an operator, a state-level adversary, a compromised friend. Protocol design cannot assume their honesty.
 
-### 7.2 Current state (pre-beta)
+### 7.2 Architectural evolution (H1 → H4 → H4c)
 
-The current relay path is:
+The relay path has gone through three iterations, documented honestly:
+
+**H1 — SOCKS5 (shipped April 2026):** the gateway operates a SOCKS5 proxy and parses each `CONNECT <host>:<port>`. Works in cooperative tests, but **the gateway sees every destination a user visits**. This is the legacy path; it survives only on the macOS development gateway.
 
 ```
-Phone ── SOCKS5 ──→ Gateway ── VLESS+Reality ──→ Exit ── TLS ──→ Destination
+H1: Phone ── SOCKS5 ──→ Gateway ── VLESS+Reality ──→ Exit ── TLS ──→ Destination
+                          ↑
+                gateway parses destinations
 ```
 
-The gateway operates a SOCKS5 proxy. To forward traffic, it must parse each `CONNECT <host>:<port>` request. **This means the gateway sees every destination a user visits.** This is the dominant attack surface remaining in the current implementation.
+**H4 — blind TCP passthrough (attempted, abandoned):** attempt to make the gateway a transparent TCP forwarder so the Reality handshake completes phone-to-exit. Hit a protocol-fingerprint mismatch — the Reality server consistently rejected the forwarded handshake and served its masquerade target, indicating a sensitivity we could not isolate without server-side debugging access. Abandoned April 2026.
 
-The Reality handshake on the exit hop hides content from *network observers between the gateway and exit*, but not from the gateway itself.
+**H4c — WireGuard LAN hop with nested Reality (decided 2026-04-22, in progress):** the phone wraps its Reality stream inside a WireGuard tunnel terminated by the gateway. The gateway decrypts the outer WG packets and forwards the still-encrypted inner Reality bytes to the exit. **Reality remains end-to-end phone-to-exit; the gateway sees only opaque bytes.**
 
-### 7.3 Target state (planned)
+```
+H4c (target):
+Phone ── [WG[ Reality[ app ] ]] ──→ Gateway ── [Reality[ app ]] ──→ Exit
+                                       ↑
+                          gateway decrypts WG only;
+                          inner Reality stays opaque
+```
 
-We are moving to a model where the gateway is a **blind byte-pipe** — it pipes encrypted bytes to the exit server without parsing them. The VLESS+Reality handshake becomes **end-to-end between the user's phone and the exit server**. The gateway can observe:
+**Why WireGuard for the LAN hop, not VLESS re-termination?** A re-termination design (a brief pivot we considered as "H4b") would have left the gateway with plaintext destination visibility — defeating the privacy goal. WireGuard with nested Reality preserves the blind-gateway property without any new key material on the gateway side beyond standard WG peering.
 
-- Timing of connections
-- Byte volume per connection
-- The fact that a phone is relaying through it
+**What the gateway can and cannot observe under H4c:**
 
-But not:
+| Gateway observes | Gateway cannot observe |
+|------------------|------------------------|
+| Timing of connections | Destinations |
+| Byte volume per WG peer | TLS SNI |
+| The fact that a phone is relaying through it | Inner application protocol |
+|                                            | Per-flow Reality handshake details |
 
-- Destinations
-- Content
-- TLS handshake metadata beyond what Reality exposes to any observer
+### 7.3 Current implementation status
 
-We attempted this in April 2026 via transparent TCP passthrough and hit a mismatch between the Xray client on mobile and the Reality server: the server consistently rejected the forwarded handshake and served its masquerade target, indicating a protocol fingerprint sensitivity that we could not isolate without server-side debugging access. We pivoted to **VLESS re-termination** — the gateway runs its own VLESS inbound with its own keys, then re-originates a fresh VLESS+Reality connection to the exit. The gateway still sees destinations, but the phone↔gateway hop is no longer plain SOCKS5 — it is encrypted with per-gateway keys.
+| Component | Status |
+|-----------|--------|
+| Phone-side WG outbound — Android (Xray) | ✅ Shipped |
+| Phone-side WG outbound — iOS (sing-box) | ✅ Shipped |
+| `gateway_announce` carries `wg_pubkey` + `wg_port` | ✅ Shipped |
+| `peer_register` mesh control message | ✅ Shipped |
+| Gateway daemon — Linux/OpenWRT (Python reference implementation) | ✅ Scaffolded; end-to-end test pending |
+| OpenWRT `.ipk` package | 🚧 M1 — pending GL.iNet hardware |
+| Multi-router mesh (M2) — `babel`/`batman-adv` over inter-router WG | 🚧 Roadmap |
+| Token-gated peer auth (C3 subscription PSK) | 🚧 Post-launch |
 
-This is described in more detail in the repository's `GATEWAY_PRIVACY.md`.
+This is described in more detail in the repository's `GATEWAY_PRIVACY.md` and `ROADMAP.md` § H4c.
 
 ### 7.4 Residual risks even in target state
 
@@ -317,7 +341,7 @@ Phone → Gateway₁ → Gateway₂ → Exit. Each hop decrypts its own layer on
 
 - Adversary running gateways learns only their own hop's metadata.
 - Active IP enumeration of the gateway pool requires many compromised clients and is rate-limited by the broker.
-- Compromising a single gateway no longer lets an adversary identify users' destinations.
+- Adds **user-identity unlinkability** on top of the destination unlinkability that H4c already provides — under H4c a single gateway already cannot see destinations; multi-hop additionally ensures that the gateway *adjacent to the exit* cannot see *which user* is making the request.
 
 ### 8.4 Implementation cost
 
@@ -350,7 +374,7 @@ The following are all documented in `SECURITY.md` in the repository as pre-beta 
 4. **Single exit server today (strategy already defined).** Single-point-of-failure against IP-level blocking. See `EXIT_INFRASTRUCTURE.md` for the full multi-server strategy: geographic + jurisdictional + provider + ASN + IP-range diversity, automated rotation, and health monitoring. Target: 5–7 concurrent exits.
 5. **Mesh packets unencrypted.** Any attacker on the same LAN captures the topology. Mitigation: v2 of the protocol wraps each datagram in ChaCha20-Poly1305 with a PSK derived from the daily credential.
 6. **No internet-reachability check in the election.** A node on a captive portal can win the election and black-hole traffic. Mitigation: reachability probe multiplied into the election score.
-7. **Gateway sees destinations.** Section 7.2 above. Mitigation: VLESS re-termination (short term), blind TCP passthrough or Snowflake-style broker + onion routing (longer term).
+7. **Gateway sees destinations under the legacy H1 SOCKS5 path.** Section 7.2 above. **Mitigation: H4c — WireGuard LAN hop with nested Reality end-to-end (in progress).** Phone-side shipped on Android (Xray) and iOS (sing-box); Linux/OpenWRT gateway daemon scaffolded; end-to-end validation pending. Snowflake-style broker + onion routing (Section 8) is the longer-term layered defense for additional unlinkability.
 
 None are mitigated today. Beta release blocks on all seven; most have concrete implementation plans in the referenced docs.
 
@@ -369,7 +393,8 @@ The planned multi-hop onion routing (Section 8) addresses most of these — not 
 
 - **Exit:** VLESS + Reality over TLS 1.3. Curve25519 for Reality proof-of-knowledge, X25519 for TLS handshake, AES-GCM or ChaCha20-Poly1305 for record encryption.
 - **Mesh (planned v2):** ChaCha20-Poly1305 with a PSK derived from the daily credential.
-- **Phone↔gateway relay (planned v2):** VLESS over TLS with per-gateway keys, or WireGuard (Noise_IKpsk2).
+- **Phone↔gateway LAN hop (H4c, in progress):** WireGuard (Noise_IKpsk2 — ChaCha20-Poly1305, Curve25519, BLAKE2s). Reality remains end-to-end inside the WG tunnel; gateway sees only opaque encrypted bytes. See `GATEWAY_PRIVACY.md`.
+- **Inter-router mesh (M2):** WireGuard between adjacent routers, with `babel` (or `batman-adv`) running on top for path selection. Reality remains end-to-end across all hops.
 - **Broker (planned):** Ed25519 signatures on broker responses, DTLS 1.3 on the resulting WebRTC channel.
 
 ---
@@ -484,12 +509,14 @@ We report implementation status against a simple rubric: **works in a real test 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Mesh discovery (3 platforms) | ✅ Works in cooperative test | Subnet broadcast; election stable |
-| Gateway election | ✅ Works in cooperative test | Mac wins predictably |
-| SOCKS5 relay through gateway | ✅ Works in cooperative test | Real web traffic verified |
+| Gateway election (single-cell, single-hop) | ✅ Works in cooperative test | Mac wins predictably; dissolves under multi-router mesh (M2) into routing-protocol path selection |
+| SOCKS5 relay through gateway (H1) | ✅ Works in cooperative test | Real web traffic verified; legacy Mac dev path |
+| Phone-side H4c WG outbound (Android + iOS) | ✅ Builds and integrates | End-to-end blind-gateway test pending |
+| Linux/OpenWRT gateway daemon | ✅ Scaffolded | Awaiting test hardware or VM validation |
 | VLESS+Reality exit | ✅ Works | Production-grade protocol |
 | Zero-touch onboarding (Android 10+, iOS 11+) | ✅ Works in cooperative test | H5 shipped |
-| Blind gateway (end-to-end Reality) | ❌ Attempted and failed | Reality rejected — moved to VLESS re-termination plan |
-| VLESS re-termination | 🚧 Planned | ~3 days of work |
+| Blind gateway via H4 (transparent TCP passthrough) | ❌ Attempted and failed (April 2026) | Reality handshake rejected by exit — abandoned |
+| Blind gateway via H4c (WireGuard LAN hop, nested Reality) | 🚧 Phone-side shipped; gateway daemon scaffolded; end-to-end test pending | Replaces both H4 and the considered-but-unimplemented H4b VLESS re-termination |
 | Dynamic exit server configuration | ❌ Not implemented | Pre-beta blocker #1 |
 | Per-user tokens | ❌ Not implemented | Pre-beta blocker #2 |
 | Server-side salt | ❌ Not implemented | Pre-beta blocker #3 |

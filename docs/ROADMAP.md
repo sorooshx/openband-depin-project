@@ -169,10 +169,13 @@ So H4c collapses partially into M1: the gateway-side work happens directly on Op
 | Task | Est. | Status |
 |------|------|--------|
 | Mesh protocol extension — `gateway_announce` carries `wg_pubkey` + `wg_port` | 1d | ✅ shipped 2026-04-22 |
-| Android Xray config — WireGuard outbound chained through Reality | 2d | in progress |
-| iOS sing-box config — WireGuard outbound chained through Reality | 2d | pending |
-| OpenWRT gateway package — `wg0` setup + dynamic peer mgmt + blind forwarder | 3d | needs GL.iNet hardware or Linux VM for testing |
-| End-to-end test + iOS battery profile | 1d | pending |
+| `peer_register` mesh control message — phones publish their WG pubkey to gateway | 0.5d | ✅ shipped 2026-04-22 |
+| Android Xray config — WireGuard outbound chained through Reality | 2d | ✅ shipped 2026-04-22 |
+| iOS sing-box config — WireGuard outbound chained through Reality | 2d | ✅ shipped 2026-04-22 |
+| Linux/OpenWRT gateway daemon scaffold (Python reference implementation) | 1d | ✅ scaffolded 2026-04-22; restart-safe + SIGTERM-clean |
+| End-to-end test against the Linux daemon | 1d | 🚧 pending — needs Linux VM or RPi on phone's WiFi |
+| OpenWRT `.ipk` package (`procd` service, `nftables` instead of `iptables`, UCI integration) | 2d | 🚧 pending — needs GL.iNet hardware |
+| iOS battery profile under sustained WG | 0.5d | pending |
 
 **Mac gateway (deferred):** stays on SOCKS5 as the dev-testing path. If we ever want WG on Mac for production, we'll add an SMAppService privileged helper as a separate sprint.
 
@@ -223,8 +226,26 @@ Code is written (`bootstrap/server.js`). Deployment steps (firewall rules, servi
 ## Medium priority
 
 ### M1. OpenWRT router package (Chat 10)
-Target: GL.iNet GL-MT300N-V2. Runs OpenBand gateway logic + sing-box on MIPS. Solves the "Mac can't share WiFi→WiFi" problem at the hardware layer.
-**Work:** ~2 weeks.
+Target: GL.iNet GL-MT300N-V2 or GL-AR750S. The Python reference daemon already implements the full H4c gateway-side logic (WG inbound, dynamic peer add via `peer_register`, `gateway_announce` broadcast). M1 is mostly **packaging**, not new protocol work:
+
+- Wrap as a `procd` service (`/etc/init.d/openband-gateway`)
+- Replace `iptables` with `nft` / OpenWRT firewall UCI
+- Build into the stock firmware image / OpenWRT feed
+- Hardware validation: thermals, throughput, MIPS-arch quirks
+- WiFi AP config so phones associate to the router's SSID directly
+
+**Work:** ~1 week, contingent on GL.iNet hardware on hand.
+
+### M1b. Multi-router mesh routing (router-only fabric)
+Once two+ OpenWRT gateways exist in the same physical area, run a routing protocol over inter-router WireGuard tunnels so packets find the best path to internet automatically. Phones don't change — they pick the nearest router; the routing protocol takes care of the rest.
+
+- Engine choice: **`babel`** (lightweight, L3, works directly over WireGuard) preferred over `batman-adv` (kernel module, L2). `babeld` is a single binary with a small config.
+- Each router maintains WG tunnels to neighbor routers it discovers via the existing mesh announce.
+- Routers with internet upstream advertise a default route; routers without learn the best path.
+- Failover is automatic — when the upstream router dies, `babel` re-converges within ~10s.
+- Election logic in OpenBand becomes a **fallback for phone-only cells** (no router present); under multi-router mesh it doesn't run.
+
+**Work:** ~1–2 weeks on top of M1. Doesn't block M1 shipping — single-router deployments work standalone.
 
 ### M2. Telegram bot + USDC-on-Base subscription (Chat 08)
 Bot flow: `/start` → show plans → user pays USDC on Base → on-chain payment confirmed → bot issues VLESS UUID + credentials. Ties into C3. Includes blackout-detection auto-waiver logic.
@@ -251,9 +272,9 @@ Marketing + download page, FAQ, subscription link to Telegram bot.
 | Background mesh | ❌ Won't do | Same constraints + `listen()` blocked in NE extension |
 | Gateway / relay for other users | ❌ Won't do | Requires background + listen sockets |
 
-**Implication:** volunteer gateways run on **Mac** (today) and **OpenWRT routers** (M1). iPhones are always clients. This simplifies the election model (no iOS node ever scores high enough to win) and eliminates a whole class of iOS-specific bugs.
+**Implication:** the production gateway is the **OpenWRT router** (M1). Mac is dev-only. iPhones are always clients. This simplifies the election model (no iOS node ever scores high enough to win), eliminates a whole class of iOS-specific bugs, and keeps the volunteer-operator pitch coherent — "host a router and earn rewards" is unambiguous.
 
-When [C6 Snowflake broker](#c6-snowflake-style-rendezvous-broker-architectural-north-star) ships, iOS clients will connect via WebRTC DataChannel — a path that doesn't hit the NE-sandbox issues at all, since WebRTC is native to iOS and survives backgrounding differently than NEPacketTunnelProvider.
+When [C6 Snowflake broker](#c6-snowflake-style-rendezvous-broker-architectural-north-star) ships, iOS clients will connect via WebRTC DataChannel — a *client-only* path that doesn't hit the NE-sandbox issues at all, since WebRTC is native to iOS and survives backgrounding differently than NEPacketTunnelProvider. C6 does not change iOS from client-only.
 
 ---
 
@@ -286,10 +307,15 @@ When [C6 Snowflake broker](#c6-snowflake-style-rendezvous-broker-architectural-n
 
 ## Next session should start with
 
-**H4 — Blind gateway TCP passthrough.** This is the pivot decided 2026-04-20 after discovering the SOCKS5 design let rogue gateways see every user's destinations. H4 is ~2 days of work and is the highest-ROI security improvement possible short-term.
+**End-to-end H4c validation against the Linux daemon.** Phone-side WG outbound is shipped on both platforms; the gateway daemon (Python reference implementation) is scaffolded and restart-safe. What's missing is real-traffic validation:
 
-**After H4:** H5 (zero-touch gateway onboarding, ~4 days) — matches the real production scenario where phones have no direct internet and must find + join the Mac's WiFi automatically.
+1. Run the daemon on a Linux box (RPi, Lima VM with bridged networking, or any spare Linux host) on the same WiFi as a test phone.
+2. Verify `wg show wg0` shows the phone's pubkey after Connect.
+3. Confirm `tcpdump -i wg0` shows only encrypted Reality bytes — no plaintext destinations (the blind-gateway property).
+4. Confirm web traffic exits via the gateway, then the exit server, then to the destination.
 
-**Then:** security cluster C1 / C3 / C5 / H3 — dynamic config, per-user UUIDs, server-side salt, bootstrap deployment.
+**After validation:** M1 — package the daemon as an OpenWRT `.ipk` (procd service, nftables instead of iptables, UCI integration) once GL.iNet hardware is on hand. Roughly 1 week.
+
+**Parallel track:** security cluster C1 / C3 / C5 / H3 — dynamic config, per-user UUIDs, server-side salt, bootstrap deployment. Independent of the H4c validation work.
 
 **Longer-horizon:** C6 (Snowflake-style broker — see [GATEWAY_PRIVACY.md](GATEWAY_PRIVACY.md)) is the v2.0 north star. Don't start it until H4/H5 + C1/C3/C5 land and we have at least 2 external volunteer gateways to test with.

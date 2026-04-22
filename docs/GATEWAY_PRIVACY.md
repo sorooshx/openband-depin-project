@@ -5,11 +5,11 @@
 **Status:** architectural target, not implemented.
 **Priority:** Critical (C6 in [ROADMAP.md](ROADMAP.md)) — blocks pre-beta deployment.
 
-> **Prerequisite:** the [blind-gateway TCP passthrough pivot](SECURITY.md#gateway-as-adversary-threat-model) (H4). That change ensures a gateway can't read destinations or content. The broker design below builds on top — it additionally hides *which gateway* the user is using and adds onion-routing for timing-analysis resistance.
+> **Prerequisite:** the [WireGuard LAN-hop with nested Reality pivot](SECURITY.md#gateway-as-adversary-threat-model) (H4c, decided 2026-04-22, in progress). That change ensures a gateway can't read destinations or content. The broker design below builds on top — it additionally hides *which gateway* the user is using and adds onion-routing for timing-analysis resistance.
 
 ## Why this document exists
 
-[SECURITY.md](SECURITY.md) covers the single-exit-server case (protecting the project's own exit IPs). That problem is solvable by rotation + domain-fronted bootstrap. This document covers the **harder** problem: protecting the IPs of **volunteer gateway nodes** — the people running OpenBand on their Mac, router, or Starlink-connected device outside the censored region who relay traffic for users inside it.
+[SECURITY.md](SECURITY.md) covers the single-exit-server case (protecting the project's own exit IPs). That problem is solvable by rotation + domain-fronted bootstrap. This document covers the **harder** problem: protecting the IPs of **volunteer gateway nodes** — the people running OpenBand on their OpenWRT router (with Starlink, fiber, or LTE upstream) outside the censored region who relay traffic for users inside it.
 
 Once volunteer gateways exist, the failure mode is different:
 

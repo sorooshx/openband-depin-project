@@ -12,8 +12,8 @@
 
 OpenBand is a censorship-circumvention system for users in jurisdictions with state-level traffic filtering. It solves the problem that **centralized VPNs have a single point of failure** — one IP block kills the service — by doing three things at once:
 
-1. **DePIN** — gateways are run by a distributed network of volunteer operators (laptops, OpenWRT routers, satellite-connected devices), incentivized rather than centrally owned. No single operator, company, or jurisdiction controls the network.
-2. **Mesh networking** — phones inside the censored region discover nearby gateways over local WiFi and auto-elect the best one. No pre-shared secrets, no manual configuration, no central directory.
+1. **DePIN** — gateways are run by a distributed network of volunteer operators (primarily **OpenWRT routers** with Starlink/fiber/LTE upstream; Mac laptops in development environments). No single operator, company, or jurisdiction controls the network.
+2. **Mesh networking** — phones inside the censored region discover nearby gateways over local WiFi and pick the nearest one. No pre-shared secrets, no manual configuration, no central directory. Multi-router meshes (M2) use `babel`/`batman-adv` over inter-router WireGuard tunnels for automatic path selection — no leader election required.
 3. **Satellite-capable uplink** — gateways can run on any upstream including **satellite (Starlink, Iridium, etc.)**, completely bypassing terrestrial ISPs. A state cannot block orbital traffic at its borders.
 
 The end user opens an app, it joins the nearest OpenBand gateway automatically, and traffic flows through an encrypted end-to-end tunnel (VLESS+Reality, masqueraded as ordinary HTTPS) to a volunteer-operated exit server abroad.
@@ -21,10 +21,12 @@ The end user opens an app, it joins the nearest OpenBand gateway automatically, 
 ## The three pillars
 
 ### 🌐 DePIN — distributed operator infrastructure
-Gateway operators are not employees of a VPN company. They are volunteers (and eventually subscription-compensated participants) running OpenBand gateway software on commodity hardware — a Mac laptop in an expat home, a GL.iNet router on a café table, a Starlink terminal in a vehicle. The network's resilience scales with the number of independent operators, not with a company's server fleet. This is the Tor / Snowflake / Helium model adapted for anti-censorship.
+Gateway operators are not employees of a VPN company. They are volunteers (and eventually subscription-compensated participants) running OpenBand gateway software on commodity hardware — a **GL.iNet OpenWRT router** in a café or apartment, a **Starlink terminal** in a vehicle or remote site. (Mac laptops can act as gateways for development testing only — they are not the production target.) The network's resilience scales with the number of independent operators, not with a company's server fleet. This is the Tor / Snowflake / Helium model adapted for anti-censorship.
+
+**iPhones cannot be gateways**, ever — Apple's NetworkExtension sandbox blocks the inbound `listen()` required for the role. iPhones are first-class clients but never relay other users' traffic. **Android phones are clients by default**; they can opt into an *ephemeral hotspot egress* mode for outage scenarios (Phase 3), but a phone is not a substitute for a router as a permanent gateway.
 
 ### 📡 Mesh networking — zero-config local discovery
-Inside the censored region, phones running OpenBand broadcast and listen on UDP port 5555. They discover each other, elect a gateway by score (internet reachability, signal strength, battery), and tunnel traffic through the winner. A Mac or router nearby scores highest and always wins — phones never need to know gateway IPs in advance. The wire format is documented in [MESH_PROTOCOL.md](docs/MESH_PROTOCOL.md).
+Inside the censored region, phones running OpenBand broadcast and listen on UDP port 5555. They discover nearby gateways and pick the nearest one (signal + RTT). The wire format is documented in [MESH_PROTOCOL.md](docs/MESH_PROTOCOL.md). When multiple routers are present (M2), `babel` running over inter-router WireGuard tunnels handles path selection automatically — no leader election, no quorum logic.
 
 ### 🛰️ Satellite and alternative uplinks — censorship-proof backhaul
 Because gateways are ordinary devices running in operator environments outside the censored region, they can route their upstream through anything: fiber, cable, 5G, **Starlink**, Iridium, or other LEO/MEO satellite services. The adversary controls its national border, not low-Earth orbit. A gateway in a country with repressive ISPs can still reach a working exit via satellite. This is especially relevant for operators inside *partially-censored* regions who want to help users in more censored regions.
@@ -49,7 +51,7 @@ Together, these three make OpenBand a **decentralized, self-organizing, backhaul
 
 ## The one-paragraph pitch
 
-Phones inside a censored region run a small mobile app. The app discovers nearby OpenBand gateways over local WiFi **mesh**, elects the strongest one automatically, and tunnels traffic through it to an exit server outside the censored region. Gateway operators are a distributed network of **DePIN** volunteers running OpenBand software on commodity hardware — Macs, OpenWRT routers, **Starlink-connected nodes**. The exit protocol (VLESS+Reality) masquerades as a real HTTPS connection to a high-trust domain, so DPI can't distinguish it from normal web traffic. Because gateways can run on **satellite uplinks** bypassing national ISPs entirely, and because there are many small gateway operators rather than a handful of big servers, a state adversary cannot block the network with a single firewall rule — they'd have to block satellite orbits or enumerate every residential IP in the world.
+Phones inside a censored region run a small mobile app. The app discovers nearby OpenBand gateways over local WiFi **mesh**, picks the nearest one, and tunnels traffic through it to an exit server outside the censored region. The phone↔gateway hop is encrypted with **WireGuard**, with the **VLESS+Reality** end-to-end tunnel nested inside — so the gateway sees only opaque encrypted bytes, never destinations. Gateway operators are a distributed network of **DePIN** volunteers running OpenBand software on commodity hardware — primarily **OpenWRT routers** with **Starlink** or fiber upstream. The exit protocol masquerades as a real HTTPS connection to a high-trust domain, so DPI can't distinguish it from normal web traffic. Because gateways can run on **satellite uplinks** bypassing national ISPs entirely, and because there are many small gateway operators rather than a handful of big servers, a state adversary cannot block the network with a single firewall rule — they'd have to block satellite orbits or enumerate every residential IP in the world.
 
 ## Why this exists
 
@@ -93,10 +95,12 @@ All real credentials (server IPs, UUIDs, cryptographic keys, salt values) have b
 
 **What works today:**
 - Mesh discovery across Android, iOS, and macOS
-- Automatic gateway election (Mac wins predictably over mobile nodes)
-- SOCKS5 relay through gateway → VLESS+Reality → exit server → internet
+- Automatic gateway selection on a single LAN (Mac wins predictably over mobile nodes — election logic dissolves under the M2 multi-router mesh in favor of routing-protocol path selection)
+- SOCKS5 relay through gateway → VLESS+Reality → exit server → internet (legacy H1 path; preserved for Mac dev gateway)
+- Phone-side **WireGuard outbound** for the H4c blind-gateway path (Android via Xray, iOS via sing-box) — built and integrated; end-to-end test against the Linux/OpenWRT gateway daemon pending
+- Linux/OpenWRT gateway daemon (reference Python implementation) scaffolded — implements WG inbound + dynamic peer add via `peer_register` mesh control message + `gateway_announce` carrying `wg_pubkey`/`wg_port`
 - Zero-touch WiFi onboarding on Android 10+ and iOS 11+
-- Full exit traffic verified end-to-end in cooperative test conditions
+- Full exit traffic verified end-to-end via the H1 SOCKS5 path in cooperative test conditions
 
 **Pre-beta blockers** (we will not ship to real at-risk users until these close):
 1. Exit server IP hardcoded in binary (needs dynamic bootstrap — see [EXIT_INFRASTRUCTURE.md](docs/EXIT_INFRASTRUCTURE.md))
@@ -104,8 +108,8 @@ All real credentials (server IPs, UUIDs, cryptographic keys, salt values) have b
 3. Shared salt compiled into binary (needs server-side delivery)
 4. Single exit server (needs 5–7 redundant)
 5. Unencrypted mesh packets
-6. No internet-reachability check in gateway election
-7. Gateway sees destinations (needs VLESS re-termination)
+6. No internet-reachability check in gateway election (single-LAN fallback path)
+7. Gateway sees destinations under the legacy H1 SOCKS5 path — **resolved by H4c** (WireGuard LAN hop with nested Reality, in progress; phone-side shipped, gateway daemon scaffolded, end-to-end test pending)
 
 Full discussion: [SECURITY.md](docs/SECURITY.md).
 
@@ -127,7 +131,7 @@ See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for workflow.
 
 **Do not file public issues for security vulnerabilities.** Use one of:
 
-- GitHub Security Advisory (preferred): [Create private advisory](https://github.com/SorooshTechnologies/openband-depin-project/security/advisories/new)
+- GitHub Security Advisory (preferred): [Create private advisory](https://github.com/SorooshX/openband-depin-project/security/advisories/new)
 - Email: (project owner's contact — to be added)
 
 We request a 30-day disclosure window for critical issues; longer negotiable for hard-to-fix vulnerabilities.
@@ -146,11 +150,8 @@ Mistakes are ours; foundations are theirs.
 
 ## License
 
-**Documentation, whitepaper, and protocol specifications** (this repository): **CC-BY-4.0** — free to share and adapt with attribution. We actively encourage interoperability research and academic review.
-
-**Source code** (the OpenBand mobile apps, gateway software, and exit-server configuration): **proprietary · all rights reserved**. The source lives in separate private repositories and is not published. Independent security auditors may request NDA-gated access by emailing the project owner. This may change post-launch; our current priority is hardening before opening.
-
-**Why not source-available / MIT?** Pre-launch the project is small and copy-risk outweighs trust-gain; we protect it under copyright. Post-launch, after the security posture matures and a sustainable funding model is in place, we may revisit with a source-available license (e.g., BUSL or PolyForm Noncommercial). The whitepaper and threat model are public precisely so users do not have to trust proprietary code blindly — the claims are documented, falsifiable, and testable.
+Documentation: **CC-BY-4.0** (free to share and adapt with attribution).
+Source code (private repo): **AGPL-3.0** (target).
 
 See [LICENSE](LICENSE) for final terms.
 

@@ -96,18 +96,21 @@ Not every platform plays every role. This is a **deliberate scope decision** as 
 
 ## Data flow: connect button press → exit traffic
 
-**Architectural pivot (2026-04-20):** the gateway is now a **blind TCP passthrough**, not a SOCKS5 proxy. The VLESS+Reality handshake is end-to-end between the phone and the exit node. The gateway only pipes bytes. See [Trust model](#trust-model) below for why.
+**Architectural pivot (2026-04-20, finalized 2026-04-22 as H4c):** the gateway is a **blind byte-pipe** for the VLESS+Reality session that the phone holds end-to-end with the exit node. The phone↔gateway LAN hop is wrapped in **WireGuard** (H4c); the gateway decrypts the outer WG only and forwards the still-encrypted inner Reality bytes. The gateway never sees destinations or content. See [Trust model](#trust-model) below.
+
+The earlier H4 attempt — a transparent TCP passthrough at the gateway with no LAN-hop encryption — was abandoned (Reality handshake rejected by the exit due to a fingerprint sensitivity we could not isolate). H4c (WireGuard outer, Reality inner) replaces it and additionally encrypts the LAN hop. Legacy SOCKS5 (H1) survives only on the macOS dev gateway.
 
 1. User taps **Connect** in HomeScreen.
 2. `useVPNStore.connect()` → `VpnService.start()` → native `VpnModule.start()`.
-3. Native side spins up TUN + tun2socks + Xray.
-4. Initial Xray config = direct VLESS to the exit node (works even without a gateway peer).
-5. Concurrently, `DiscoveryModule` / `DiscoveryForegroundService` broadcasts heartbeats on UDP :5555.
-6. On `gateway_announce` from Mac (score 1.0), local node marks Mac as gateway, fires `gatewayChanged` to JS.
-7. Xray hot-swaps to relay config: **VLESS outbound targeting the gateway** (same Reality public key as the exit node).
-8. Gateway's TCP forwarder pipes bytes unchanged to the exit node.
-9. Phone's VLESS+Reality handshake completes end-to-end with the exit node. Gateway sees only encrypted bytes.
-10. User traffic flows: app → TUN → phone Xray → TCP → gateway forwarder → exit node → open internet.
+3. Native side spins up TUN + tun2socks + Xray (Android) / sing-box (iOS).
+4. Initial config = direct VLESS+Reality to the exit (works without any gateway peer).
+5. Concurrently, `DiscoveryForegroundService` (Android) / `DiscoveryModule` (iOS) broadcasts heartbeats on UDP :5555.
+6. Gateway responds with `gateway_announce` carrying its `wg_pubkey` + `wg_port`.
+7. Phone generates/loads its WG keypair (`WireGuardKeyPair`) and unicasts a `peer_register` mesh message to the gateway with its public key.
+8. Gateway adds the phone as a WG peer (`wg set wg0 peer <pubkey> allowed-ips <derived-ip>/32`) — derived IP comes from `SHA-256(pubkey)[0]%253+2`, identical on both sides.
+9. Phone hot-swaps engine config to `relayConfigViaWg` — VLESS+Reality to the exit, dialed through a WireGuard outbound that peers with the gateway (`dialerProxy: wg-tunnel`).
+10. Reality handshake completes end-to-end phone↔exit. Gateway sees only encrypted WG packets (and after WG decryption, only encrypted Reality bytes).
+11. User traffic: app → TUN → engine → `[WG[ Reality[ app ] ]]` → gateway → `[Reality[ app ]]` → exit → open internet.
 
 ## Trust model
 
