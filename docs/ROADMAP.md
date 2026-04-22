@@ -2,8 +2,22 @@
 
 **Website:** [https://www.openband.io](https://www.openband.io)
 
-Status as of **2026-04-20** (end of Chat 09).
+Status as of **2026-04-22**.
 Priority is strict: do the Critical items before anything in High, etc.
+
+---
+
+## Current sprint — security hardening (2026-04-22 → ~2 weeks)
+
+Focused push that closes every unfixed LAN-side leak before moving on to multi-server exit:
+
+1. **H4c** — WireGuard LAN hop + nested Reality (~12d, see below)
+2. **Per-session `node_id`** — closes Residual Risk C (~1d)
+3. **MAC-randomization startup check** — warns if OS-level randomization is disabled (~1d)
+4. **Disable mDNS / AirDrop on VPN start** — closes RF-chatter leak (~1d)
+5. **H3** — deploy bootstrap server (~½d)
+
+After this sprint, the gateway-as-adversary threat model is essentially closed short of onion routing. Next sprint: **C1/C2 multi-server exit**, the real pre-beta blocker.
 
 ---
 
@@ -128,20 +142,39 @@ H1 wired the mechanism (mesh → hot-swap Xray config → route through gateway)
 
 **Next step:** H4b below — a pragmatic middle ground that works and still encrypts the phone↔gateway hop.
 
-### H4b. VLESS re-termination gateway (replaces H4)
-Gateway runs a VLESS *inbound* with its own keys and a VLESS+Reality *outbound* to the exit node. Phone speaks VLESS to Mac; Mac terminates, re-originates a proven-working VLESS+Reality to the exit.
+### ~~H4b. VLESS re-termination gateway~~ — Superseded by H4c on 2026-04-22
+Scoping considered a second VLESS inbound on the gateway with its own Reality keys. Abandoned in favor of H4c (WireGuard + nested Reality), which is cleaner, gives better iOS ergonomics, and preserves the full blind-gateway property that VLESS re-termination could not.
 
-**Tradeoff:** Mac still sees destinations (SOCKS-like semantics from terminated VLESS), but the phone↔Mac hop is encrypted (not raw SOCKS5 over LAN). Fits residual risk A from SECURITY.md — gateway-visibility remains, but at least the LAN traffic is private.
+### H4c. WireGuard LAN hop with nested Reality end-to-end (replaces H4b)
+Encrypt the phone ↔ gateway LAN hop with **WireGuard** (userspace, inside the Xray/sing-box process). Inside that tunnel, the phone's VLESS+Reality session goes **end-to-end to the exit node** unchanged. The gateway decrypts WireGuard, sees only opaque Reality bytes, and forwards them to the exit — no destinations, no content, no TLS metadata.
 
-**Implementation:**
-- Mac `SingBoxManager`: add a second VLESS inbound with its own UUID + Reality keys (generated on first run, rotated daily).
-- Mac's existing outbound to the exit remains unchanged.
-- Android + iOS `relayConfig`: point VLESS outbound at the gateway with Mac's keys (delivered via mesh or paired QR).
-- Key delivery: put UUID + Reality pubkey in `gateway_announce` message (mesh already encrypted in the v2 plan).
+```
+[ WG[ Reality[ app ] ] ]   UDP :51820           [ Reality[ app ] ]     TCP :443
+Phone ─────────────────────────────────→  Gateway ────────────────────────→  Exit
+                                           (WG term + blind forward)
+```
 
-**Work:** ~3 days.
+**Why WireGuard and not VLESS on the LAN leg:**
+- Modern primitives (ChaCha20-Poly1305, Curve25519), ~20% less phone CPU than TLS
+- UDP on a fixed LAN port — no DPI concerns inside our own WiFi
+- Clean iOS story: run WG in **userspace** inside the existing sing-box process, no NE whole-device sandbox fight (the constraint that blocked iOS background VPN doesn't apply here)
+- Official libs: `wireguard-android` (AOSP) and `WireGuardKit` (Swift Package)
+
+**Work breakdown (~12 days total):**
+| Task | Est. |
+|------|------|
+| Android WireGuard integration (inside existing `XrayVpnService`) | 2d |
+| iOS WireGuard integration (`WireGuardKit` SPM + sing-box coexistence) | 3d |
+| Mac gateway WG terminator + blind-forward to exit | 3d |
+| Mesh protocol extension — `gateway_announce` carries `wg_pubkey` + `wg_endpoint` | 1d |
+| End-to-end testing + iOS battery profile | 3d |
+
+**Open questions:**
+- **Peer auth:** ship **open** (any phone can peer) pre-C3; tighten to token-gated (C3 UUID as WG PSK) when the Telegram bot lands.
+- **Keypair lifetime:** per-phone with monthly rotation — simpler UX than per-session, still supports revocation.
+
 **Depends on:** nothing.
-**Limitation:** doesn't achieve the full "blind gateway" property. See [SECURITY.md § Gateway-as-adversary](SECURITY.md#gateway-as-adversary-threat-model) for what this leaves on the table.
+**Unlocks:** closes Residual Risk A (destinations visible to gateway) for the LAN hop. Fits OpenWRT natively — M1 actually becomes easier.
 
 ### H5. Zero-touch gateway onboarding (phones auto-find & join)
 Phone opens OpenBand → taps Connect → system auto-joins the OpenBand SSID using pre-computed credentials (`CredentialGenerator` derives today's SSID+password from shared salt + UTC date).

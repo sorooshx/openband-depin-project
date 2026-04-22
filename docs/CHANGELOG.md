@@ -7,6 +7,15 @@ Versions track chat-sprint work rather than semver until v1.0.
 
 ## [Unreleased]
 
+### Changed (2026-04-22 — security hardening sprint begins)
+- **H4b superseded by H4c**: LAN hop will be **WireGuard + nested Reality end-to-end to the exit**, not VLESS re-termination. Cleaner iOS story (userspace WG inside sing-box, no NE sandbox fight), preserves full blind-gateway property, ~20% less phone CPU than TLS.
+- SECURITY.md residual-risk table rewritten against the H4c design. WireGuard + nested Reality moves "destinations visible to gateway" to 🟢 None (was 🔴 High).
+- ROADMAP reorganized around a 2-week **security hardening sprint**: H4c → per-session `node_id` → MAC-randomization startup check → disable mDNS/AirDrop on VPN start → deploy bootstrap (H3). Next sprint after that is C1/C2 multi-server exit.
+
+### Added (2026-04-21 — economic model decision)
+- USDC-on-Base subscriptions replace earlier TON plan. Donation-funded pre-launch; free during state-level internet blackouts (detected via OONI, IODA, Cloudflare Radar).
+- WHITEPAPER § 11 "Governance, Economics, and the Blackout Clause" added.
+
 ### Added (2026-04-20 — doc + H1 session + architectural pivot)
 - Full docs suite under `docs/`: PROJECT_STRUCTURE, ARCHITECTURE, RUNBOOK, MESH_PROTOCOL, SECURITY, DEV_ENVIRONMENT, ROADMAP, CHANGELOG, CONTRIBUTING, GATEWAY_PRIVACY, README.
 - GATEWAY_PRIVACY.md: Snowflake-style rendezvous broker as v2.0 architectural north star (C6 in roadmap).
@@ -34,13 +43,22 @@ Versions track chat-sprint work rather than semver until v1.0.
 - TUN self-loop: Xray's SOCKS5 outbound to Mac was being captured by its own TUN. Exclude private LAN from TUN routes.
 - Xray config churn: `restartXrayWithConfig` was firing every 2s on every re-announce. Now only on endpoint change.
 
-### Planned
-- **H4 — Blind TCP passthrough gateway** (~2 days, highest priority)
-- **H5 — Zero-touch gateway auto-discovery + Reality validation** (~4 days)
-- Dynamic server config fetch (C1)
-- Bootstrap server deployed (H3)
+### Planned (security hardening sprint — 2026-04-22, ~2 weeks)
+- **H4c** — WireGuard LAN hop + nested Reality (~12d, highest priority)
+- **Per-session `node_id`** — closes Residual Risk C (~1d)
+- **MAC-randomization startup check** — warns if user disabled OS-level randomization (~1d)
+- **Disable mDNS / AirDrop on VPN start** — closes RF-chatter leak (~1d)
+- **H3** — deploy bootstrap server (~½d)
+
+### Planned (next sprint — C1/C2 multi-server exit, ~4 weeks)
+- Terraform modules per provider + Cloudflare Worker bootstrap + client-side server list fetch + failover
+- Target: 3 servers online in 3 different countries by end of sprint
+
+### Planned (longer-term)
+- Dynamic server config fetch (C1 — rolled into C1/C2 sprint above)
 - ChaCha20-Poly1305 on mesh UDP (C4)
-- Per-user VLESS UUIDs via Telegram bot (C3)
+- Per-user VLESS UUIDs via Telegram bot (C3) + USDC-on-Base subscription (M2)
+- Snowflake-style rendezvous broker (C6 — v2.0 target)
 
 ---
 

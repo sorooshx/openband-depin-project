@@ -63,13 +63,17 @@ This section covers the "what if the gateway operator is hostile" threat. It's a
 
 Prior to 2026-04-20, the gateway was a **SOCKS5 proxy**. To forward traffic, the gateway had to parse each `CONNECT twitter.com:443` request — meaning a rogue operator could log every destination each phone visited. The Reality tunnel only protected the gateway→exit hop, not phone→gateway.
 
-### The fix: blind TCP passthrough ([ROADMAP H4](ROADMAP.md))
+### The fix: WireGuard LAN hop with nested Reality ([ROADMAP H4c](ROADMAP.md#h4c-wireguard-lan-hop-with-nested-reality-end-to-end-replaces-h4b))
 
-The gateway is now (being made) a **byte-pipe**:
+Current design (under implementation, 2026-04-22):
 
-- Gateway listens on the standard HTTPS port, forwards all bytes to the exit node.
-- Phone's Xray does the VLESS+Reality handshake **end-to-end with the exit node**.
-- Gateway sees only encrypted Reality-wrapped bytes. No destinations, no content, no TLS metadata.
+- Phone ↔ gateway encrypted with **WireGuard** (ChaCha20-Poly1305, userspace, inside existing sing-box process — no iOS NE sandbox fight).
+- **Inside** that WireGuard tunnel, the phone's VLESS+Reality session goes **end-to-end to the exit**.
+- Gateway decrypts the outer WireGuard layer; inside it sees only opaque Reality bytes. No destinations, no content, no TLS metadata. Gateway forwards to exit as a blind TCP passthrough.
+
+Earlier design attempts:
+- **Blind TCP passthrough (H4)** — tried 2026-04-20, rejected because the exit's Reality server consistently rejected the phone's ClientHello (suspected TCP / uTLS fingerprint mismatch between phone-originated and Mac-forwarded handshakes).
+- **VLESS re-termination (H4b)** — scoped but superseded; wouldn't have preserved the full blind-gateway property.
 
 See [ARCHITECTURE.md § Trust model](ARCHITECTURE.md#trust-model) for the full diagram.
 
@@ -122,15 +126,16 @@ Gateway can silently log all metadata and upload it to the adversary later (once
 
 ### Residual-risk summary table
 
-| Risk | Severity today | After blind-gateway pivot | After onion routing (C6) |
-|------|----------------|---------------------------|---------------------------|
+| Risk | Severity today (SOCKS5) | After H4c (WireGuard + nested Reality) | After onion routing (C6) |
+|------|-------------------------|----------------------------------------|---------------------------|
 | Destinations visible to gateway | 🔴 High | 🟢 None | 🟢 None |
 | Traffic content visible | 🟢 None (TLS) | 🟢 None | 🟢 None |
+| LAN sniffer sees protocol | 🟡 Medium (SOCKS5 over WPA2) | 🟢 One opaque UDP flow | 🟢 One opaque UDP flow |
 | Timing correlation | 🔴 High | 🟡 Medium | 🟢 Low |
 | Selective denial | 🟡 Medium | 🟡 Medium | 🟢 Low (N-of-M tolerant) |
-| WiFi-level fingerprinting | 🟡 Medium | 🟡 Medium | 🟡 Medium (WiFi layer is separate) |
+| WiFi-level fingerprinting | 🟡 Medium | 🟡 Medium (WiFi layer is separate) | 🟡 Medium |
 
-**The blind-gateway pivot is the single highest-ROI security improvement we can make short-term.** It removes destinations and content from the gateway's view, which is the dominant threat. Everything else is iterative.
+**H4c is the single highest-ROI security improvement we can make short-term.** It removes destinations from the gateway's view *and* makes the LAN hop look like an opaque UDP flow, which is the dominant pair of threats. Everything else is iterative.
 
 ## Mitigated issues
 
