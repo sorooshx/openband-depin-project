@@ -9,8 +9,14 @@ Versions track chat-sprint work rather than semver until v1.0.
 
 ### Changed (2026-04-22 — security hardening sprint begins)
 - **H4b superseded by H4c**: LAN hop will be **WireGuard + nested Reality end-to-end to the exit**, not VLESS re-termination. Cleaner iOS story (userspace WG inside sing-box, no NE sandbox fight), preserves full blind-gateway property, ~20% less phone CPU than TLS.
+- **H4c gateway target pivoted to OpenWRT-first**. Userspace `wireguard-go` on macOS needs root to create `utun` devices, which would force an SMAppService privileged helper for a proper Mac gateway. OpenWRT has kernel WireGuard natively and no privilege issue — and it's the real Iran deployment target anyway (Starlink → OpenWRT router → phones). Mac stays on SOCKS5 for local dev. Collapses part of H4c into M1.
+- **Phone-side simplified**: Xray and sing-box both have native WireGuard outbound — no separate `wireguard-android` / `WireGuardKit` integration needed. Phone's existing proxy engine adds WG as a transport beneath Reality. Cuts integration effort roughly in half.
 - SECURITY.md residual-risk table rewritten against the H4c design. WireGuard + nested Reality moves "destinations visible to gateway" to 🟢 None (was 🔴 High).
 - ROADMAP reorganized around a 2-week **security hardening sprint**: H4c → per-session `node_id` → MAC-randomization startup check → disable mDNS/AirDrop on VPN start → deploy bootstrap (H3). Next sprint after that is C1/C2 multi-server exit.
+
+### Added (2026-04-22 — H4c groundwork)
+- `MeshProtocol.kt`, iOS `DiscoveryModule.swift`, Mac `MeshDiscovery.swift` — `gateway_announce` schema extended with optional `wg_pubkey` + `wg_port`. Backward-compatible; gateways that don't run WireGuard omit the fields and phones fall back to SOCKS5.
+- Built `wireguard-go` from source with a small env-var patch (`WG_SOCKET_DIR`) so the UAPI socket can live in a user-writable path. Relevant for eventual Mac privileged-helper work; the OpenWRT path uses kernel WireGuard instead.
 
 ### Added (2026-04-21 — economic model decision)
 - USDC-on-Base subscriptions replace earlier TON plan. Donation-funded pre-launch; free during state-level internet blackouts (detected via OONI, IODA, Cloudflare Radar).
